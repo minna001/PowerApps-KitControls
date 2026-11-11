@@ -89,7 +89,7 @@ const NAV = [
   ["Configuration", [["template", "Checklist templates"], ["sectiondef", "Sections"], ["questiondef", "Questions"], ["questionoption", "Question options"], ["reviewroute", "Review routes"]]],
 ];
 
-function siteMapXml() {
+function siteMapXml(withWorkspace) {
   const title = (t) => `<Titles><Title LCID="1033" Title="${esc(t)}" /></Titles>`;
   const groups = NAV.map(
     ([g, items], gi) =>
@@ -97,9 +97,9 @@ function siteMapXml() {
       items.map(([t, label]) => `<SubArea Id="${P}_sub_${t}" Entity="${P}_${t}">${title(label)}</SubArea>`).join("") +
       `</Group>`,
   ).join("");
-  // The React workspace, stored as a web resource by webapp.mjs.
+  // The React workspace, shown only where webapp.mjs has uploaded it as a web resource.
   const workspace = `<Group Id="${P}_group_workspace" IsProfile="false">${title("Workspace")}<SubArea Id="${P}_sub_workspace" Url="$webresource:${P}_/app.html">${title("Portfolio studio")}</SubArea></Group>`;
-  return `<SiteMap IntroducedVersion="7.0.0.0"><Area Id="${P}_area" ShowGroups="true">${title("NBPRA")}${workspace}${groups}</Area></SiteMap>`;
+  return `<SiteMap IntroducedVersion="7.0.0.0"><Area Id="${P}_area" ShowGroups="true">${title("NBPRA")}${withWorkspace ? workspace : ""}${groups}</Area></SiteMap>`;
 }
 
 // ---- run --------------------------------------------------------------------
@@ -111,7 +111,8 @@ console.log(`Views (${VIEWS.length})`);
 for (const v of VIEWS) await upsertView(v);
 
 console.log("Site map");
-const sitemapxml = siteMapXml();
+const hasWorkspace = (await api("GET", `webresourceset?$select=webresourceid&$filter=name eq '${P}_/app.html'`)).value.length > 0;
+const sitemapxml = siteMapXml(hasWorkspace);
 let sm = await api("GET", `sitemaps?$select=sitemapid&$filter=sitemapnameunique eq '${SITEMAP_UNIQUE}'`);
 let sitemapid = sm.value[0]?.sitemapid;
 if (sitemapid) await api("PATCH", `sitemaps(${sitemapid})`, { sitemapxml });

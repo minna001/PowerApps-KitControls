@@ -80,8 +80,11 @@ org's own `<org>.crm.dynamics.com` and `<org>.api.crm.dynamics.com`.
 
 ## NBPRA (apps/nbpra)
 
-Committee-stage approval app. Target environment so far: `https://org158f71e0.crm.dynamics.com`
-(a tenant Default environment, used as the owner's personal dev space).
+Committee-stage approval app. Development environment: `https://org3ff5e2ac.crm.dynamics.com`
+(Developer type, environment id `a7f60ed6-b73f-ebd8-9fd7-bffe32df4400`, single user, with the
+`nbpra_AllowSelfApproval` test switch on). An earlier copy also sits in the tenant Default
+environment `https://org158f71e0.crm.dynamics.com`; that one cannot run code apps because the
+owner's licence there is Power Apps for Office 365, not Premium.
 
 - `dataverse/schema.json` is the data-model contract. Scripts in `dataverse/` apply it
   and everything built on it; all are re-runnable and take `--url <org url>`:
