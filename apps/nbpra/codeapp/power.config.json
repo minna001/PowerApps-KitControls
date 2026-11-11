@@ -1,10 +1,10 @@
 {
   "version": "1.0",
-  "appId": null,
+  "appId": "e9a10a40-f5de-4b73-94bb-eab3430a63e2",
   "appDisplayName": "NBPRA",
   "region": "prod",
   "appType": "CodeApp",
-  "environmentId": "Default-7c8c2123-f735-4c37-8093-1e193d73c994",
+  "environmentId": "a7f60ed6-b73f-ebd8-9fd7-bffe32df4400",
   "description": "NBPRA submission and approval workspace",
   "buildPath": "./dist",
   "buildEntryPoint": "index.html",
