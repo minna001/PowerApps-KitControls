@@ -164,10 +164,8 @@ a.nav-item:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px;
 }
 
 /* Admin decision and timeline */
-.filters.three { grid-template-columns: minmax(200px, 2fr) repeat(2, minmax(140px, 1fr)); }
 .decision { border-color: var(--teal); }
 .decision .panel-head { background: #e4eeec; }
 .decision-hint { margin: 0 0 10px; font-size: 13px; }
 .decision-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
 .reason { color: var(--bad); font-size: 13px; margin-top: 2px; }
-@media (max-width: 760px) { .filters.three { grid-template-columns: minmax(0, 1fr); } }

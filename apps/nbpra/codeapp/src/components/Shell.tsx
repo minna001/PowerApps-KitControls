@@ -6,9 +6,6 @@ import {
   TaskListLtrRegular,
   CalendarLtrRegular,
   MailRegular,
-  HistoryRegular,
-  SettingsRegular,
-  WarningRegular,
   AlertRegular,
   CheckmarkCircleRegular,
 } from "@fluentui/react-icons";
@@ -37,15 +34,7 @@ const NAV: { heading: string; items: NavItem[] }[] = [
     ],
   },
   { heading: "Committee", items: [{ label: "Calendar and slots", icon: <CalendarLtrRegular /> }] },
-  {
-    heading: "Records",
-    items: [
-      { label: "Communications", icon: <MailRegular /> },
-      { label: "Audit timeline", href: "#/audit", icon: <HistoryRegular />, match: (r) => r === "/audit" },
-      { label: "Exceptions", icon: <WarningRegular /> },
-    ],
-  },
-  { heading: "Administration", items: [{ label: "Configuration", icon: <SettingsRegular /> }] },
+  { heading: "Records", items: [{ label: "Notifications", icon: <MailRegular /> }] },
 ];
 
 export function Shell({ route, isSample, children }: { route: string; isSample: boolean; children: ReactNode }) {

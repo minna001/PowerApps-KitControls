@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Shell } from "./components/Shell";
 import { Portfolio } from "./screens/Portfolio";
 import { Workspace } from "./screens/Workspace";
-import { Audit } from "./screens/Audit";
 import { sampleSource } from "./data/sample";
 
 const source = sampleSource;
@@ -24,8 +23,6 @@ export function App() {
     <Shell route={route} isSample={source.isSample}>
       {m ? (
         <Workspace source={source} id={decodeURIComponent(m[1])} />
-      ) : route === "/audit" ? (
-        <Audit source={source} />
       ) : (
         <Portfolio key={route} source={source} initialAttention={route === "/queue" ? "kate" : "all"} />
       )}
