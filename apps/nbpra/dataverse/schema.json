@@ -1,0 +1,321 @@
+{
+  "$comment": "Dataverse schema contract for NBPRA, taken from MVP Requirements v1.0 section 10. Input to the provisioning script. Column tuple: [name, type, required, note]. Types: text:N, memo, int, bigint, decimal, money, bool, datetime, date, choice:<name>, lookup:<table>, file, autonumber:<format>. Every table also gets a primary name column and the standard created/modified metadata. Not yet deployed or validated against an environment.",
+  "publisherPrefix": "nbpra",
+  "solution": "NBPRA",
+  "choices": {
+    "meetingstatus": ["Draft", "Open", "Closed", "Canceled"],
+    "slotstatus": ["Open", "Blocked", "Closed", "Canceled"],
+    "submissionstatus": ["Onboarding Draft", "Awaiting Onboarding Review", "Onboarding Denied", "Checklist in Progress", "Awaiting Signatory Approval", "Ready for Final Submission", "Awaiting Final Admin Review", "Final Changes Requested", "Final Rejected", "Authorized for Committee", "Withdrawn"],
+    "slotrequeststatus": ["Draft", "Pending", "Approved", "Denied", "Superseded", "Canceled"],
+    "templatestatus": ["Draft", "Published", "Retired"],
+    "answertype": ["Text", "Long text", "Boolean", "Choice", "Multi-choice", "Number", "Currency", "Date", "Person", "File"],
+    "sectionstatus": ["Not Started", "Draft", "Ready to Submit", "Under Review", "Changes Requested", "Approved", "Not Applicable", "Superseded"],
+    "revisionstate": ["Draft", "Submitted", "Approved", "Returned", "Superseded"],
+    "uploadstatus": ["Pending", "Complete", "Failed", "Superseded"],
+    "validationstatus": ["Allowed", "Blocked", "Pending"],
+    "completionpolicy": ["First authorized response", "All members", "Named members"],
+    "approvalpurpose": ["Onboarding", "Functional Section", "Signatory Package", "Final Committee Admission"],
+    "approvalpolicy": ["One authorized", "First response", "All five named"],
+    "approvalstatus": ["Pending", "Approved", "Changes Requested", "Denied", "Superseded", "Canceled"],
+    "integrationstate": ["Not posted", "Posted", "Failed", "Timed out", "Reissue pending"],
+    "assignmentstatus": ["Pending", "Completed", "Canceled", "Superseded"],
+    "decisionoutcome": ["Approve", "Changes Requested", "Deny", "Reject"],
+    "channel": ["App", "Teams", "Email", "Flow", "System"],
+    "actorkind": ["Human", "System"],
+    "eventtype": ["Submission", "Slot", "Checklist", "Section", "Evidence", "Review request", "Signatory", "Invalidation", "Final submission", "Admission", "Withdrawal", "Notification", "Export"],
+    "commchannel": ["Email", "In-app", "Teams"],
+    "commstate": ["Pending", "Sent", "Failed", "Retried"],
+    "exporttype": ["Draft", "Submitted", "Committee-authorized"],
+    "exportstatus": ["Pending", "Generated", "Failed"]
+  },
+  "tables": [
+    { "name": "committee", "display": "Committee", "ownership": "organization", "columns": [
+      ["code", "text:20", true, "Stable reference"],
+      ["description", "memo", false, "Committee remit"],
+      ["defaulttimezone", "text:100", true, "IANA or Windows zone ID"],
+      ["isactive", "bool", true, "Controls future scheduling"],
+      ["adminteam", "lookup:team", true, "Authorized scheduling group"]
+    ], "keys": [["code"]] },
+
+    { "name": "meeting", "display": "Committee Meeting", "ownership": "organization", "columns": [
+      ["committee", "lookup:committee", true, ""],
+      ["startat", "datetime", true, ""],
+      ["endat", "datetime", true, "Must be after startat"],
+      ["timezone", "text:100", true, ""],
+      ["submissiondeadlineat", "datetime", false, "Final package cutoff"],
+      ["requestopenat", "datetime", false, ""],
+      ["requestcloseat", "datetime", false, ""],
+      ["location", "text:500", false, "Restricted: meeting link or room"],
+      ["status", "choice:meetingstatus", true, ""],
+      ["cancellationreason", "memo", false, "Required on cancel with affected records"]
+    ] },
+
+    { "name": "slot", "display": "Calendar Slot", "ownership": "organization", "columns": [
+      ["meeting", "lookup:meeting", true, ""],
+      ["slotreference", "text:40", true, "User-facing identifier"],
+      ["startat", "datetime", true, "Inside parent meeting"],
+      ["endat", "datetime", true, ""],
+      ["capacity", "int", true, "At least 1"],
+      ["status", "choice:slotstatus", true, ""],
+      ["blockreason", "memo", false, ""],
+      ["activeallocationcount", "int", false, "Maintained only by the allocation operation"]
+    ], "keys": [["slotreference"]], "note": "Row version is the concurrency token." },
+
+    { "name": "submission", "display": "Submission", "ownership": "user", "columns": [
+      ["reference", "autonumber:NBPRA-{DATETIMEUTC:yyyy}-{SEQNUM:4}", true, ""],
+      ["title", "text:200", false, "Required at onboarding submit"],
+      ["businessowner", "lookup:systemuser", true, ""],
+      ["sponsor", "lookup:systemuser", false, "Metadata, not an approval gate"],
+      ["businessarea", "text:100", false, "Controlled list to be supplied"],
+      ["proposaltype", "text:100", false, "Controlled list to be supplied"],
+      ["summary", "memo", false, ""],
+      ["scope", "memo", false, "Indicative jurisdictions and scope"],
+      ["desiredtiming", "date", false, ""],
+      ["status", "choice:submissionstatus", true, "Written only by transition operations"],
+      ["checklisttemplate", "lookup:template", false, "Pinned on unlock"],
+      ["currentslotrequest", "lookup:slotrequest", false, ""],
+      ["assignedslot", "lookup:slot", false, ""],
+      ["packagerevision", "int", true, "Default 0"],
+      ["finalsubmittedat", "datetime", false, ""],
+      ["committeeauthorizedat", "datetime", false, ""],
+      ["committeeauthorizedby", "lookup:systemuser", false, ""],
+      ["lastbusinessactivityat", "datetime", false, ""],
+      ["withdrawnat", "datetime", false, ""],
+      ["withdrawnreason", "memo", false, ""]
+    ], "keys": [["reference"]] },
+
+    { "name": "slotrequest", "display": "Slot Request", "ownership": "user", "columns": [
+      ["submission", "lookup:submission", true, ""],
+      ["revisionnumber", "int", true, ""],
+      ["requestedslot", "lookup:slot", false, ""],
+      ["assignedslot", "lookup:slot", false, ""],
+      ["intakesnapshot", "memo", false, "Frozen JSON of intake fields and signatories at submit"],
+      ["status", "choice:slotrequeststatus", true, ""],
+      ["submittedat", "datetime", false, ""],
+      ["submittedby", "lookup:systemuser", false, ""],
+      ["decisionrequest", "lookup:approvalrequest", false, ""],
+      ["allocationactive", "bool", true, "True while consuming confirmed capacity"],
+      ["supersedes", "lookup:slotrequest", false, ""]
+    ], "keys": [["submission", "revisionnumber"]] },
+
+    { "name": "template", "display": "Checklist Template", "ownership": "organization", "columns": [
+      ["code", "text:40", true, ""],
+      ["version", "int", true, ""],
+      ["status", "choice:templatestatus", true, "Default Draft"],
+      ["publishedat", "datetime", false, ""],
+      ["publishedby", "lookup:systemuser", false, ""],
+      ["effectivefrom", "datetime", false, ""],
+      ["description", "memo", false, ""]
+    ], "keys": [["code", "version"]] },
+
+    { "name": "sectiondef", "display": "Section Definition", "ownership": "organization", "columns": [
+      ["template", "lookup:template", true, ""],
+      ["code", "text:40", true, ""],
+      ["displayorder", "int", true, ""],
+      ["instructions", "memo", false, ""],
+      ["applicabilityrule", "memo", false, "Whitelisted declarative rule (JSON)"],
+      ["requiresapproval", "bool", true, ""],
+      ["requiredevidencerule", "memo", false, ""]
+    ], "keys": [["template", "code"]] },
+
+    { "name": "questiondef", "display": "Question Definition", "ownership": "organization", "columns": [
+      ["sectiondef", "lookup:sectiondef", true, ""],
+      ["code", "text:40", true, ""],
+      ["label", "text:500", true, ""],
+      ["helptext", "memo", false, ""],
+      ["answertype", "choice:answertype", true, ""],
+      ["displayorder", "int", true, ""],
+      ["isrequired", "bool", true, ""],
+      ["requiredrule", "memo", false, ""],
+      ["applicabilityrule", "memo", false, ""],
+      ["validationrule", "memo", false, ""],
+      ["requiresevidence", "bool", true, ""],
+      ["evidencerule", "memo", false, ""]
+    ], "keys": [["sectiondef", "code"]] },
+
+    { "name": "questionoption", "display": "Question Option", "ownership": "organization", "columns": [
+      ["questiondef", "lookup:questiondef", true, ""],
+      ["valuecode", "text:60", true, ""],
+      ["label", "text:300", true, ""],
+      ["displayorder", "int", false, ""],
+      ["isactive", "bool", true, ""]
+    ], "keys": [["questiondef", "valuecode"]] },
+
+    { "name": "reviewroute", "display": "Review Route", "ownership": "organization", "columns": [
+      ["sectiondef", "lookup:sectiondef", true, ""],
+      ["reviewteam", "lookup:team", true, ""],
+      ["routecode", "text:40", true, "Distinguishes conditional variants"],
+      ["applicabilityrule", "memo", false, ""],
+      ["completionpolicy", "choice:completionpolicy", true, "Default first authorized response"],
+      ["displayorder", "int", false, ""],
+      ["dueoffsetdays", "int", false, ""],
+      ["isactive", "bool", true, ""]
+    ], "keys": [["sectiondef", "reviewteam", "routecode"]] },
+
+    { "name": "sectioninstance", "display": "Section Instance", "ownership": "user", "columns": [
+      ["submission", "lookup:submission", true, ""],
+      ["sectiondef", "lookup:sectiondef", true, ""],
+      ["status", "choice:sectionstatus", true, ""],
+      ["isapplicable", "bool", true, ""],
+      ["applicabilityreason", "text:500", false, ""],
+      ["currentrevision", "lookup:sectionrevision", false, ""],
+      ["approvedrevision", "lookup:sectionrevision", false, ""],
+      ["lastsubmittedat", "datetime", false, ""],
+      ["approvedat", "datetime", false, ""]
+    ], "keys": [["submission", "sectiondef"]] },
+
+    { "name": "sectionrevision", "display": "Section Revision", "ownership": "user", "columns": [
+      ["sectioninstance", "lookup:sectioninstance", true, ""],
+      ["revisionnumber", "int", true, ""],
+      ["state", "choice:revisionstate", true, ""],
+      ["submittedat", "datetime", false, ""],
+      ["submittedby", "lookup:systemuser", false, ""],
+      ["supersedes", "lookup:sectionrevision", false, ""],
+      ["routingsnapshot", "memo", false, "Immutable after submit"],
+      ["contentmanifest", "memo", false, "Immutable after submit"],
+      ["lockedat", "datetime", false, ""]
+    ], "keys": [["sectioninstance", "revisionnumber"]] },
+
+    { "name": "answer", "display": "Answer", "ownership": "user", "columns": [
+      ["sectionrevision", "lookup:sectionrevision", true, ""],
+      ["questiondef", "lookup:questiondef", true, ""],
+      ["answertype", "choice:answertype", true, ""],
+      ["textvalue", "memo", false, ""],
+      ["booleanvalue", "bool", false, "Read with isanswered to tell No from missing"],
+      ["numbervalue", "decimal", false, ""],
+      ["currencyvalue", "money", false, ""],
+      ["currencycode", "text:3", false, ""],
+      ["datevalue", "date", false, ""],
+      ["personvalue", "lookup:systemuser", false, ""],
+      ["optioncode", "text:60", false, ""],
+      ["multioptioncodes", "memo", false, "JSON array of option codes"],
+      ["isanswered", "bool", true, ""],
+      ["isapplicable", "bool", true, ""]
+    ], "keys": [["sectionrevision", "questiondef"]] },
+
+    { "name": "evidence", "display": "Evidence Attachment", "ownership": "user", "columns": [
+      ["submission", "lookup:submission", true, ""],
+      ["slotrequest", "lookup:slotrequest", false, "Exactly one of slotrequest or sectionrevision"],
+      ["sectionrevision", "lookup:sectionrevision", false, ""],
+      ["questiondef", "lookup:questiondef", false, ""],
+      ["file", "file", false, "Max size set from the approved file policy"],
+      ["originalfilename", "text:260", true, ""],
+      ["contenttype", "text:150", true, ""],
+      ["sizebytes", "bigint", true, ""],
+      ["versionnumber", "int", true, ""],
+      ["supersedes", "lookup:evidence", false, ""],
+      ["uploadedat", "datetime", true, ""],
+      ["uploadedby", "lookup:systemuser", true, ""],
+      ["uploadstatus", "choice:uploadstatus", true, ""],
+      ["validationstatus", "choice:validationstatus", false, ""]
+    ] },
+
+    { "name": "approvalrequest", "display": "Approval Request", "ownership": "user", "columns": [
+      ["submission", "lookup:submission", true, ""],
+      ["purpose", "choice:approvalpurpose", true, ""],
+      ["slotrequest", "lookup:slotrequest", false, ""],
+      ["sectionrevision", "lookup:sectionrevision", false, ""],
+      ["packagerevision", "int", false, ""],
+      ["packagemanifest", "memo", false, "Immutable"],
+      ["reviewteam", "lookup:team", false, ""],
+      ["policy", "choice:approvalpolicy", true, ""],
+      ["status", "choice:approvalstatus", true, "Default Pending"],
+      ["dueat", "datetime", false, ""],
+      ["closedat", "datetime", false, ""],
+      ["externalapprovalid", "text:200", false, ""],
+      ["idempotencykey", "text:200", true, ""],
+      ["integrationstate", "choice:integrationstate", false, ""]
+    ], "keys": [["idempotencykey"]] },
+
+    { "name": "approvalassignment", "display": "Approval Assignment", "ownership": "user", "columns": [
+      ["approvalrequest", "lookup:approvalrequest", true, ""],
+      ["assigneduser", "lookup:systemuser", true, ""],
+      ["assignedteam", "lookup:team", false, ""],
+      ["signatoryassignment", "lookup:signatory", false, ""],
+      ["assignedat", "datetime", true, ""],
+      ["dueat", "datetime", false, ""],
+      ["status", "choice:assignmentstatus", true, ""],
+      ["delegatedfrom", "lookup:systemuser", false, ""],
+      ["eligibilitysnapshot", "memo", false, ""]
+    ] },
+
+    { "name": "approvaldecision", "display": "Approval Decision", "ownership": "organization", "appendOnly": true, "columns": [
+      ["approvalrequest", "lookup:approvalrequest", true, ""],
+      ["assignment", "lookup:approvalassignment", true, ""],
+      ["actor", "lookup:systemuser", true, "The human who decided"],
+      ["outcome", "choice:decisionoutcome", true, ""],
+      ["comment", "memo", false, "Mandatory for deny, return, reject"],
+      ["decidedat", "datetime", true, "Server time"],
+      ["channel", "choice:channel", true, ""],
+      ["correlationid", "text:200", true, ""],
+      ["subjectrevisionreference", "text:200", true, ""]
+    ], "keys": [["correlationid"]] },
+
+    { "name": "signatory", "display": "Signatory Assignment", "ownership": "user", "columns": [
+      ["submission", "lookup:submission", true, ""],
+      ["slotnumber", "int", true, "1 to 5"],
+      ["person", "lookup:systemuser", false, "Required at onboarding submit"],
+      ["assignmentversion", "int", true, ""],
+      ["iscurrent", "bool", true, ""],
+      ["assignedat", "datetime", false, ""],
+      ["assignedby", "lookup:systemuser", false, ""],
+      ["replacedat", "datetime", false, ""],
+      ["replacementreason", "memo", false, ""]
+    ], "keys": [["submission", "slotnumber", "assignmentversion"]] },
+
+    { "name": "businessevent", "display": "Business Event", "ownership": "organization", "appendOnly": true, "columns": [
+      ["submission", "lookup:submission", true, ""],
+      ["eventtype", "choice:eventtype", true, ""],
+      ["action", "text:200", true, ""],
+      ["occurredat", "datetime", true, "Server time"],
+      ["actor", "lookup:systemuser", false, ""],
+      ["actorkind", "choice:actorkind", true, ""],
+      ["relatedrecordtype", "text:100", false, ""],
+      ["relatedrecordid", "text:40", false, ""],
+      ["oldstatus", "text:100", false, ""],
+      ["newstatus", "text:100", false, ""],
+      ["summary", "memo", false, ""],
+      ["reason", "memo", false, ""],
+      ["channel", "choice:channel", false, ""],
+      ["correlationid", "text:200", false, ""],
+      ["eventkey", "text:200", true, "Unique; prevents duplicate effective events"]
+    ], "keys": [["eventkey"]] },
+
+    { "name": "communication", "display": "Communication", "ownership": "user", "columns": [
+      ["submission", "lookup:submission", true, ""],
+      ["relatedrequest", "lookup:approvalrequest", false, ""],
+      ["triggerevent", "lookup:businessevent", false, ""],
+      ["channel", "choice:commchannel", true, ""],
+      ["recipientuser", "lookup:systemuser", false, ""],
+      ["recipientaddress", "text:320", false, ""],
+      ["subject", "text:300", false, ""],
+      ["templatecode", "text:60", false, ""],
+      ["bodysnapshot", "memo", false, "Restricted; no tokens or signed links"],
+      ["state", "choice:commstate", true, ""],
+      ["requestedat", "datetime", true, ""],
+      ["deliveredat", "datetime", false, ""],
+      ["attemptcount", "int", true, ""],
+      ["lasterrorcategory", "text:200", false, ""],
+      ["providerreference", "text:200", false, ""],
+      ["idempotencykey", "text:200", true, ""],
+      ["readat", "datetime", false, "In-app only"]
+    ], "keys": [["idempotencykey"]] },
+
+    { "name": "exportpackage", "display": "Export Package", "ownership": "user", "columns": [
+      ["submission", "lookup:submission", true, ""],
+      ["packagerevision", "int", true, ""],
+      ["sourcemanifest", "memo", false, ""],
+      ["exporttype", "choice:exporttype", true, ""],
+      ["requestedby", "lookup:systemuser", true, ""],
+      ["requestedat", "datetime", true, ""],
+      ["generatedat", "datetime", false, ""],
+      ["status", "choice:exportstatus", true, ""],
+      ["file", "file", false, ""],
+      ["filename", "text:260", false, ""],
+      ["sizebytes", "bigint", false, ""],
+      ["templateversion", "text:40", false, ""],
+      ["errorcategory", "text:200", false, ""],
+      ["correlationid", "text:200", false, ""]
+    ] }
+  ]
+}
