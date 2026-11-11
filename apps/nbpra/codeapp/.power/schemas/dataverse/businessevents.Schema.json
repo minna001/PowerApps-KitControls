@@ -199,7 +199,7 @@
             null,
             null
           ],
-          "x-ms-optionsetmetadataid": "986100a6-8ddd-f111-84e8-0022480bb5a1",
+          "x-ms-optionsetmetadataid": "e2c01186-f7dd-f111-84ea-000d3a30c3b4",
           "x-ms-isGlobal": true,
           "x-ms-optionsetdisplayname": "Actorkind",
           "x-ms-optionSetType": "Picklist"
@@ -270,7 +270,7 @@
             null,
             null
           ],
-          "x-ms-optionsetmetadataid": "946100a6-8ddd-f111-84e8-0022480bb5a1",
+          "x-ms-optionsetmetadataid": "dec01186-f7dd-f111-84ea-000d3a30c3b4",
           "x-ms-isGlobal": true,
           "x-ms-optionsetdisplayname": "Channel",
           "x-ms-optionSetType": "Picklist"
@@ -353,7 +353,7 @@
             null,
             null
           ],
-          "x-ms-optionsetmetadataid": "9c6100a6-8ddd-f111-84e8-0022480bb5a1",
+          "x-ms-optionsetmetadataid": "e7c01186-f7dd-f111-84ea-000d3a30c3b4",
           "x-ms-isGlobal": true,
           "x-ms-optionsetdisplayname": "Eventtype",
           "x-ms-optionSetType": "Picklist"
@@ -501,7 +501,7 @@
             null,
             null
           ],
-          "x-ms-optionsetmetadataid": "39c75881-5514-4596-a136-fe57f526421b",
+          "x-ms-optionsetmetadataid": "cdd35f61-c202-4a28-a009-a415b36aa5ca",
           "x-ms-isGlobal": false,
           "x-ms-optionsetdisplayname": "Status",
           "x-ms-optionSetType": "State"
@@ -533,7 +533,7 @@
             null,
             null
           ],
-          "x-ms-optionsetmetadataid": "914f425d-4551-4959-a6b6-f0a0e9b84645",
+          "x-ms-optionsetmetadataid": "d3365787-8b20-4ec3-b80e-3d35293b1d0c",
           "x-ms-isGlobal": false,
           "x-ms-optionsetdisplayname": "Status Reason",
           "x-ms-optionSetType": "Status"

@@ -13,6 +13,8 @@ export * as Nbpra_approvaldecisionsModel from './models/Nbpra_approvaldecisionsM
 export * as Nbpra_approvalrequestsModel from './models/Nbpra_approvalrequestsModel';
 export * as Nbpra_businesseventsModel from './models/Nbpra_businesseventsModel';
 export * as Nbpra_committeesModel from './models/Nbpra_committeesModel';
+export * as Nbpra_evidencesModel from './models/Nbpra_evidencesModel';
+export * as Nbpra_exportpackagesModel from './models/Nbpra_exportpackagesModel';
 export * as Nbpra_meetingsModel from './models/Nbpra_meetingsModel';
 export * as Nbpra_questiondefsModel from './models/Nbpra_questiondefsModel';
 export * as Nbpra_questionoptionsModel from './models/Nbpra_questionoptionsModel';
@@ -35,6 +37,8 @@ export * from './services/Nbpra_approvaldecisionsService';
 export * from './services/Nbpra_approvalrequestsService';
 export * from './services/Nbpra_businesseventsService';
 export * from './services/Nbpra_committeesService';
+export * from './services/Nbpra_evidencesService';
+export * from './services/Nbpra_exportpackagesService';
 export * from './services/Nbpra_meetingsService';
 export * from './services/Nbpra_questiondefsService';
 export * from './services/Nbpra_questionoptionsService';

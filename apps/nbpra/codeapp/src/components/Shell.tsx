@@ -21,7 +21,7 @@ const NAV: { heading: string; adminOnly?: boolean; items: NavItem[] }[] = [
     heading: "Work",
     items: [
       { label: "Home", href: "#/home", icon: <HomeRegular />, match: (r) => r === "/home" },
-      { label: "My submissions", href: "#/mine", icon: <DocumentMultipleRegular />, match: (r) => r === "/mine" || r === "/new" || r.startsWith("/onboarding") },
+      { label: "My submissions", href: "#/mine", icon: <DocumentMultipleRegular />, match: (r) => r === "/mine" || r === "/new" || r === "/reuse" || r.startsWith("/onboarding") },
       { label: "My approvals", href: "#/approvals", icon: <CheckmarkCircleRegular />, match: (r) => r === "/approvals" },
     ],
   },

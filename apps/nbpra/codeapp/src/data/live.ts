@@ -9,6 +9,8 @@ import type {
   BusinessEvent,
   Channel,
   DecisionState,
+  ExportInfo,
+  FileContent,
   Intake,
   MeetingInfo,
   OpResult,
@@ -34,6 +36,7 @@ const L = {
   meeting: ["Draft", "Open", "Closed", "Canceled"],
   slot: ["Open", "Blocked", "Closed", "Canceled"],
   channel: ["App", "Teams", "Email", "Flow", "System"],
+  exportType: ["Draft", "Submitted", "Committee-authorized"],
   eventType: ["Submission", "Slot", "Checklist", "Section", "Evidence", "Review request", "Signatory", "Invalidation", "Final submission", "Admission", "Withdrawal", "Notification", "Export"],
   answerType: ["Text", "Long text", "Boolean", "Choice", "Multi-choice", "Number", "Currency", "Date", "Person", "File"],
   approval: ["Pending", "Approved", "Changes Requested", "Denied", "Superseded", "Canceled"],
@@ -134,16 +137,20 @@ export function createLiveSource(t: Transport): DataSource {
 
   /** Questions of a section with the answers stored on one revision. */
   async function questionsWithAnswers(sectionDefId: string, revisionId: string | undefined): Promise<Question[]> {
-    const defs = await t.query("nbpra_questiondefs", { select: ["nbpra_questiondefid", "nbpra_code", "nbpra_label", "nbpra_answertype", "nbpra_isrequired", "nbpra_displayorder"], filter: `_nbpra_sectiondef_value eq ${sectionDefId}`, orderBy: ["nbpra_displayorder asc"] });
+    const defs = await t.query("nbpra_questiondefs", { select: ["nbpra_questiondefid", "nbpra_code", "nbpra_label", "nbpra_answertype", "nbpra_isrequired", "nbpra_displayorder", "nbpra_validationrule"], filter: `_nbpra_sectiondef_value eq ${sectionDefId}`, orderBy: ["nbpra_displayorder asc"] });
     if (!defs.length) return [];
-    const [options, answers] = await Promise.all([
+    const [options, answers, files] = await Promise.all([
       t.query("nbpra_questionoptions", { select: ["_nbpra_questiondef_value", "nbpra_valuecode", "nbpra_label", "nbpra_displayorder"], filter: anyOf("_nbpra_questiondef_value", defs.map((d) => d.nbpra_questiondefid)), orderBy: ["nbpra_displayorder asc"] }),
       revisionId ? t.query("nbpra_answers", { select: ["_nbpra_questiondef_value", "nbpra_isanswered", "nbpra_textvalue", "nbpra_booleanvalue", "nbpra_numbervalue", "nbpra_datevalue", "nbpra_optioncode"], filter: `_nbpra_sectionrevision_value eq ${revisionId}` }) : Promise.resolve([] as Row[]),
+      // Uploaded and not replaced: upload status "Complete".
+      revisionId ? t.query("nbpra_evidences", { select: ["nbpra_evidenceid", "_nbpra_questiondef_value", "nbpra_originalfilename", "nbpra_sizebytes", "nbpra_versionnumber", "nbpra_uploadedat"], filter: `_nbpra_sectionrevision_value eq ${revisionId} and nbpra_uploadstatus eq ${BASE + 1}` }) : Promise.resolve([] as Row[]),
     ]);
     const answerBy = byId(answers, "_nbpra_questiondef_value");
+    const fileBy = byId(files, "_nbpra_questiondef_value");
     return defs.map((d): Question => {
       const type = (choice(d, "nbpra_answertype", L.answerType) || "Text") as AnswerType;
       const a = answerBy.get(d.nbpra_questiondefid);
+      const file = fileBy.get(d.nbpra_questiondefid);
       let value = "";
       if (a?.nbpra_isanswered) {
         if (type === "Boolean") value = a.nbpra_booleanvalue === true ? "true" : a.nbpra_booleanvalue === false ? "false" : "";
@@ -160,6 +167,12 @@ export function createLiveSource(t: Transport): DataSource {
         required: d.nbpra_isrequired === true,
         options: options.filter((o) => o._nbpra_questiondef_value === d.nbpra_questiondefid).map((o) => ({ code: o.nbpra_valuecode, label: o.nbpra_label })),
         value,
+        ...(type === "File"
+          ? {
+              accept: String(d.nbpra_validationrule ?? "").split(/[ ,]+/).filter(Boolean),
+              file: file ? { id: file.nbpra_evidenceid, name: file.nbpra_originalfilename, sizeBytes: Number(file.nbpra_sizebytes ?? 0), version: file.nbpra_versionnumber ?? 1, uploadedAt: file.nbpra_uploadedat } : undefined,
+            }
+          : {}),
       };
     });
   }
@@ -298,14 +311,15 @@ export function createLiveSource(t: Transport): DataSource {
 
     async getIntake(submissionId): Promise<Intake> {
       const [subs, requests, seats] = await Promise.all([
-        t.query("nbpra_submissions", { select: ["nbpra_title", "nbpra_businessarea", "nbpra_proposaltype", "nbpra_summary", "nbpra_scope", "_nbpra_sponsor_value"], filter: `nbpra_submissionid eq ${submissionId}` }),
+        t.query("nbpra_submissions", { select: ["nbpra_title", "nbpra_businessarea", "nbpra_proposaltype", "nbpra_summary", "nbpra_scope", "_nbpra_sponsor_value", "_nbpra_copiedfrom_value"], filter: `nbpra_submissionid eq ${submissionId}` }),
         t.query("nbpra_slotrequests", { select: ["nbpra_status", "nbpra_revisionnumber", "_nbpra_requestedslot_value"], filter: `_nbpra_submission_value eq ${submissionId}`, orderBy: ["nbpra_revisionnumber desc"] }),
         t.query("nbpra_signatories", { select: ["nbpra_slotnumber", "_nbpra_person_value"], filter: `_nbpra_submission_value eq ${submissionId} and nbpra_iscurrent eq true` }),
       ]);
       const s = subs[0] ?? {};
       const request = requests.find((r) => Number(r.nbpra_status) === SLOT_REQUEST_DRAFT) ?? requests[0];
       const signatories = [1, 2, 3, 4, 5].map((n) => seats.find((x) => x.nbpra_slotnumber === n)?._nbpra_person_value ?? "");
-      return { title: s.nbpra_title ?? "", businessArea: s.nbpra_businessarea ?? "", proposalType: s.nbpra_proposaltype ?? "", summary: s.nbpra_summary ?? "", scope: s.nbpra_scope ?? "", sponsorId: s._nbpra_sponsor_value ?? "", slotId: request?._nbpra_requestedslot_value ?? "", signatories };
+      const source = s._nbpra_copiedfrom_value ? await t.query("nbpra_submissions", { select: ["nbpra_reference"], filter: `nbpra_submissionid eq ${s._nbpra_copiedfrom_value}` }) : [];
+      return { copiedFrom: source[0]?.nbpra_reference, title: s.nbpra_title ?? "", businessArea: s.nbpra_businessarea ?? "", proposalType: s.nbpra_proposaltype ?? "", summary: s.nbpra_summary ?? "", scope: s.nbpra_scope ?? "", sponsorId: s._nbpra_sponsor_value ?? "", slotId: request?._nbpra_requestedslot_value ?? "", signatories };
     },
 
     async saveOnboarding(submissionId, intake) {
@@ -343,6 +357,29 @@ export function createLiveSource(t: Transport): DataSource {
     },
     async submitSection(sectionId) {
       return plain(await t.workflow("submitSection", sectionId));
+    },
+
+    // ---- evidence, memo and reuse ----
+
+    async uploadEvidence(sectionId, questionId, file) {
+      return result(await t.workflow("uploadEvidence", sectionId, undefined, undefined, JSON.stringify({ q: questionId, ...file })), (d) => d);
+    },
+    async downloadFile(kind, id) {
+      return result(await t.workflow(kind === "evidence" ? "downloadEvidence" : "downloadExport", id), (d) => JSON.parse(d) as FileContent);
+    },
+    async listExports(submissionId): Promise<ExportInfo[]> {
+      const [rows, users] = await Promise.all([
+        t.query("nbpra_exportpackages", { select: ["nbpra_exportpackageid", "nbpra_filename", "nbpra_exporttype", "nbpra_generatedat", "_nbpra_requestedby_value", "nbpra_status"], filter: `_nbpra_submission_value eq ${submissionId} and nbpra_status eq ${BASE + 1}`, orderBy: ["nbpra_generatedat desc"] }),
+        t.query("systemusers", { select: ["systemuserid", "fullname"] }),
+      ]);
+      const userById = byId(users, "systemuserid");
+      return rows.map((r) => ({ id: r.nbpra_exportpackageid, fileName: r.nbpra_filename ?? "memo.pdf", type: choice(r, "nbpra_exporttype", L.exportType), generatedAt: r.nbpra_generatedat, requestedBy: userById.get(r._nbpra_requestedby_value)?.fullname ?? "" }));
+    },
+    async saveMemo(submissionId, fileName, base64) {
+      return result(await t.workflow("saveExport", submissionId, undefined, undefined, JSON.stringify({ fileName, base64 })), (d) => d);
+    },
+    async copySubmission(submissionId) {
+      return result(await t.workflow("copySubmission", submissionId), (d) => d);
     },
 
     // ---- functional review and signatories ----
@@ -383,12 +420,13 @@ export function createLiveSource(t: Transport): DataSource {
       const [inst] = await t.query("nbpra_sectioninstances", { select: ["_nbpra_sectiondef_value"], filter: `nbpra_sectioninstanceid eq ${rev._nbpra_sectioninstance_value}` });
       const questions = await questionsWithAnswers(inst._nbpra_sectiondef_value, req._nbpra_sectionrevision_value);
       const shown = (q: Question) => {
+        if (q.type === "File") return q.file ? q.file.name : "No file uploaded";
         if (!q.value) return "Not answered";
         if (q.type === "Boolean") return q.value === "true" ? "Yes" : "No";
         if (q.type === "Choice") return q.options.find((o) => o.code === q.value)?.label ?? q.value;
         return q.value;
       };
-      return { ...task, answers: questions.map((q) => ({ label: q.label, value: shown(q) })) };
+      return { ...task, answers: questions.map((q) => ({ label: q.label, value: shown(q), fileId: q.file?.id })) };
     },
 
     async decideReview(requestId, outcome, comment) {

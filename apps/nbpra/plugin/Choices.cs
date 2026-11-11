@@ -41,6 +41,9 @@ namespace Nbpra.Plugins
                 return i >= 0 && i < names.Length ? names[i] : v.ToString();
             }
         }
+        internal static class UploadStatus { public const int Pending = B + 0, Complete = B + 1, Failed = B + 2, Superseded = B + 3; }
+        internal static class ExportType { public const int Draft = B + 0, Submitted = B + 1, CommitteeAuthorized = B + 2; }
+        internal static class ExportStatus { public const int Pending = B + 0, Generated = B + 1, Failed = B + 2; }
         internal static class RevisionState { public const int Draft = B + 0, Submitted = B + 1, Approved = B + 2, Returned = B + 3, Superseded = B + 4; }
         internal static class AnswerType { public const int Text = B + 0, LongText = B + 1, Boolean = B + 2, Choice = B + 3, MultiChoice = B + 4, Number = B + 5, Currency = B + 6, Date = B + 7, Person = B + 8, File = B + 9; }
         internal static class ApprovalPurpose { public const int Onboarding = B + 0, FunctionalSection = B + 1, SignatoryPackage = B + 2, FinalCommitteeAdmission = B + 3; }
@@ -50,6 +53,6 @@ namespace Nbpra.Plugins
         internal static class DecisionOutcome { public const int Approve = B + 0, ChangesRequested = B + 1, Deny = B + 2, Reject = B + 3; }
         internal static class Channel { public const int App = B + 0, Teams = B + 1, Email = B + 2, Flow = B + 3, System = B + 4; }
         internal static class ActorKind { public const int Human = B + 0, System = B + 1; }
-        internal static class EventType { public const int Submission = B + 0, Slot = B + 1, Checklist = B + 2, Section = B + 3, ReviewRequest = B + 5, Signatory = B + 6, Invalidation = B + 7, FinalSubmission = B + 8, Admission = B + 9; }
+        internal static class EventType { public const int Submission = B + 0, Slot = B + 1, Checklist = B + 2, Section = B + 3, ReviewRequest = B + 5, Signatory = B + 6, Invalidation = B + 7, FinalSubmission = B + 8, Admission = B + 9, Evidence = B + 4, Export = B + 12; }
     }
 }

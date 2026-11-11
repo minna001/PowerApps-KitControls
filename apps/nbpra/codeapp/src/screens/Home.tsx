@@ -24,9 +24,14 @@ export function Home({ source, user }: { source: DataSource; user: UserContext }
   return (
     <>
       <PageHead eyebrow="Home" title={`Welcome, ${user.fullName.split(" ")[0]}`}>
-        <a className="btn primary" href="#/calendar">
-          Start a new submission
-        </a>
+        <div className="head-actions">
+          <a className="btn" href="#/reuse">
+            Start from a previous submission
+          </a>
+          <a className="btn primary" href="#/calendar">
+            Start a new submission
+          </a>
+        </div>
       </PageHead>
 
       <div className="tiles">

@@ -28,6 +28,8 @@ const SERVICES: Record<string, { getAll: unknown }> = {
   nbpra_approvalrequests: gen.Nbpra_approvalrequestsService,
   nbpra_approvalassignments: gen.Nbpra_approvalassignmentsService,
   nbpra_approvaldecisions: gen.Nbpra_approvaldecisionsService,
+  nbpra_evidences: gen.Nbpra_evidencesService,
+  nbpra_exportpackages: gen.Nbpra_exportpackagesService,
   systemusers: gen.SystemusersService,
   teams: gen.TeamsService,
 };

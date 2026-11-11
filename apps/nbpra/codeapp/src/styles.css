@@ -223,3 +223,10 @@ a.nav-item:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px;
   .form-grid, .checklist, .fields .two { grid-template-columns: minmax(0, 1fr); }
   .page-head, .task-row, .meeting-head { flex-direction: column; align-items: stretch; }
 }
+
+/* Evidence, memo and reuse */
+.head-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-start; }
+.head-actions .btn { margin-top: 10px; padding: 8px 14px; text-decoration: none; white-space: nowrap; }
+.file-q { display: grid; gap: 8px; border: 1px dashed var(--line); background: var(--card); padding: 10px 12px; }
+.file-q input[type="file"] { font: inherit; max-width: 100%; }
+.memo-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 6px; font-size: 13px; }

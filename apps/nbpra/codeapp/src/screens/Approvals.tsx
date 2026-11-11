@@ -3,6 +3,7 @@ import { Button, Field, Textarea } from "@fluentui/react-components";
 import type { DataSource } from "../data/source";
 import type { OpResult, ReviewDetail, ReviewTask, SignatoryTask } from "../data/types";
 import { Notice, PageHead, formatDateTime } from "../components/ui";
+import { saveToDisk } from "../files";
 
 /** Functional review worklist and the signed-in user's signatory approvals. */
 export function Approvals({ source }: { source: DataSource }) {
@@ -66,7 +67,22 @@ export function Approvals({ source }: { source: DataSource }) {
                     {open.answers.map((a) => (
                       <div key={a.label}>
                         <dt>{a.label}</dt>
-                        <dd>{a.value}</dd>
+                        <dd>
+                          {a.fileId ? (
+                            <button
+                              className="link plain"
+                              onClick={async () => {
+                                const r = await source.downloadFile("evidence", a.fileId!);
+                                if (r.ok) saveToDisk(r.data);
+                                else setResult(r);
+                              }}
+                            >
+                              {a.value}
+                            </button>
+                          ) : (
+                            a.value
+                          )}
+                        </dd>
                       </div>
                     ))}
                   </dl>

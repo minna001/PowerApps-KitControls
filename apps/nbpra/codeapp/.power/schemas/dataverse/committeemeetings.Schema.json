@@ -272,7 +272,7 @@
             null,
             null
           ],
-          "x-ms-optionsetmetadataid": "c9d6ba8c-8ddd-f111-84e8-0022480bb5a1",
+          "x-ms-optionsetmetadataid": "ab214f71-f7dd-f111-84ea-000d3a30c3b4",
           "x-ms-isGlobal": true,
           "x-ms-optionsetdisplayname": "Meetingstatus",
           "x-ms-optionSetType": "Picklist"
@@ -350,7 +350,7 @@
             null,
             null
           ],
-          "x-ms-optionsetmetadataid": "7508aee3-ae60-49e0-88d5-a7e89b98bbd6",
+          "x-ms-optionsetmetadataid": "59d7125e-123d-476d-9349-14fa1a8b9501",
           "x-ms-isGlobal": false,
           "x-ms-optionsetdisplayname": "Status",
           "x-ms-optionSetType": "State"
@@ -382,7 +382,7 @@
             null,
             null
           ],
-          "x-ms-optionsetmetadataid": "6d439073-3000-4659-8450-e4e604ead308",
+          "x-ms-optionsetmetadataid": "d8821d30-d693-4221-8550-3f3a3095104f",
           "x-ms-isGlobal": false,
           "x-ms-optionsetdisplayname": "Status Reason",
           "x-ms-optionSetType": "Status"

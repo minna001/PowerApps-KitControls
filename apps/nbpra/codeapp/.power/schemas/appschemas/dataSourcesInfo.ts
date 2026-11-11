@@ -90,6 +90,20 @@ export const dataSourcesInfo = {
     "dataSourceType": "Dataverse",
     "apis": {}
   },
+  "nbpra_evidences": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "nbpra_evidenceid",
+    "dataSourceType": "Dataverse",
+    "apis": {}
+  },
+  "nbpra_exportpackages": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "nbpra_exportpackageid",
+    "dataSourceType": "Dataverse",
+    "apis": {}
+  },
   "nbpra_meetings": {
     "tableId": "",
     "version": "",

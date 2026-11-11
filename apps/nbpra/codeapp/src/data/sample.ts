@@ -299,6 +299,21 @@ export const sampleSource: DataSource = {
   async submitSection() {
     return NOT_IN_SAMPLE;
   },
+  async uploadEvidence() {
+    return NOT_IN_SAMPLE;
+  },
+  async downloadFile() {
+    return NOT_IN_SAMPLE;
+  },
+  async listExports() {
+    return [];
+  },
+  async saveMemo() {
+    return NOT_IN_SAMPLE;
+  },
+  async copySubmission() {
+    return NOT_IN_SAMPLE;
+  },
   async listReviewTasks() {
     return [];
   },

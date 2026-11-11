@@ -83,7 +83,7 @@ namespace Nbpra.Plugins
             Entity sub;
             try
             {
-                sub = svc.Retrieve("nbpra_submission", submissionId, new ColumnSet("nbpra_status", "nbpra_name", "nbpra_businessowner", "nbpra_currentslotrequest", "nbpra_assignedslot", "nbpra_packagerevision", "nbpra_checklisttemplate"));
+                sub = svc.Retrieve("nbpra_submission", submissionId, new ColumnSet("nbpra_status", "nbpra_name", "nbpra_businessowner", "nbpra_currentslotrequest", "nbpra_assignedslot", "nbpra_packagerevision", "nbpra_checklisttemplate", "nbpra_copiedfrom"));
             }
             catch (Exception)
             {
@@ -226,6 +226,9 @@ namespace Nbpra.Plugins
             {
                 var templateRef = sub.GetAttributeValue<EntityReference>("nbpra_checklisttemplate") ?? PinTemplateAndSections(svc, subRef);
                 if (templateRef != null) subUpdate["nbpra_checklisttemplate"] = templateRef;
+                // A submission started from an earlier one opens with that one's answers as drafts.
+                var copiedFrom = sub.GetAttributeValue<EntityReference>("nbpra_copiedfrom");
+                if (copiedFrom != null && owner != null) Sections.Prefill(svc, submissionId, copiedFrom.Id, owner);
             }
             svc.Update(subUpdate);
 

@@ -6,6 +6,7 @@ import { Home } from "./screens/Home";
 import { Calendar } from "./screens/Calendar";
 import { Onboarding } from "./screens/Onboarding";
 import { Approvals } from "./screens/Approvals";
+import { Reuse } from "./screens/Reuse";
 import { sampleSource } from "./data/sample";
 import { createLiveSource } from "./data/live";
 import { createWebApiTransport } from "./data/transport-webapi";
@@ -65,6 +66,7 @@ export function App() {
   else if (path === "/new") page = <Onboarding key={route} source={source} user={user} pickedSlot={params.get("slot") ?? undefined} />;
   else if (path === "/calendar") page = <Calendar source={source} forSubmission={params.get("for") ?? undefined} />;
   else if (path === "/approvals") page = <Approvals source={source} />;
+  else if (path === "/reuse") page = <Reuse source={source} user={user} />;
   else if (path === "/mine") page = <Portfolio key={path} source={source} user={user} mode="mine" />;
   else if (path === "/queue") page = <Portfolio key={path} source={source} user={user} mode="queue" />;
   else if (path === "/portfolio") page = <Portfolio key={path} source={source} user={user} mode="all" />;

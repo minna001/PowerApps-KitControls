@@ -70,9 +70,14 @@ export function Portfolio({ source, user, mode }: { source: DataSource; user: Us
           <h1 className="page-title">{HEAD[mode][1]}</h1>
         </div>
         {mode === "mine" && (
-          <a className="btn primary" href="#/calendar">
-            Start a new submission
-          </a>
+          <div className="head-actions">
+            <a className="btn" href="#/reuse">
+              Start from a previous submission
+            </a>
+            <a className="btn primary" href="#/calendar">
+              Start a new submission
+            </a>
+          </div>
         )}
       </div>
 

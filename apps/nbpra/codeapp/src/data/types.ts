@@ -171,9 +171,33 @@ export interface Intake {
   slotId: string;
   /** Exactly five entries; an empty string is an unfilled seat. */
   signatories: string[];
+  /** Reference of the earlier submission this draft was started from, if any. Read-only. */
+  copiedFrom?: string;
 }
 
-export type AnswerType = "Text" | "Long text" | "Boolean" | "Choice" | "Number" | "Date";
+export type AnswerType = "Text" | "Long text" | "Boolean" | "Choice" | "Number" | "Date" | "File";
+
+export interface StoredFile {
+  id: string;
+  name: string;
+  sizeBytes: number;
+  version: number;
+  uploadedAt: string;
+}
+
+export interface FileContent {
+  fileName: string;
+  contentType: string;
+  base64: string;
+}
+
+export interface ExportInfo {
+  id: string;
+  fileName: string;
+  type: string;
+  generatedAt: string;
+  requestedBy: string;
+}
 
 export interface Question {
   id: string;
@@ -184,6 +208,9 @@ export interface Question {
   options: { code: string; label: string }[];
   /** Stored answer as text: "true"/"false", a number, an ISO date, an option code or free text. */
   value: string;
+  /** File questions only: the current upload, and the extensions the question accepts. */
+  file?: StoredFile;
+  accept?: string[];
 }
 
 export interface SectionDetail {
@@ -208,7 +235,7 @@ export interface ReviewTask {
 }
 
 export interface ReviewDetail extends ReviewTask {
-  answers: { label: string; value: string }[];
+  answers: { label: string; value: string; fileId?: string }[];
 }
 
 export interface SignatoryTask {

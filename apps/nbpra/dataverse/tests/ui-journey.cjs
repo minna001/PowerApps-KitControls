@@ -71,7 +71,15 @@ const ORIGIN = "http://nbpra.test"; // never resolved; every request is intercep
     for (const d of await p.locator(".cl-body input[type=date]").all()) await d.fill("2027-03-01");
     for (const s of await p.locator(".cl-body select").all()) await s.selectOption({ index: 1 });
     for (const g of await p.locator(".cl-body [role=radiogroup]").all()) await g.getByLabel("No").check();
+    // Required evidence: upload a workbook for each file question, one at a time.
+    const files = await p.locator('.cl-body input[type="file"]').count();
+    for (let i = 0; i < files; i++) {
+      await p.locator('.cl-body input[type="file"]').nth(i).setInputFiles({ name: `workbook-${i + 1}.xlsx`, mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buffer: Buffer.from("ui journey workbook " + Date.now()) });
+      await p.waitForFunction((n) => document.querySelectorAll(".cl-body .file-current").length >= n, i + 1, { timeout: T });
+      uploads++;
+    }
   };
+  let uploads = 0;
   const submitSection = async () => {
     await p.getByRole("button", { name: "Submit section for review" }).click();
     await p.waitForSelector('.cl-head :text("Under Review")', { timeout: T });
@@ -209,6 +217,50 @@ const ORIGIN = "http://nbpra.test"; // never resolved; every request is intercep
     await shot("13-authorized");
     await p.getByRole("tab", { name: "Timeline" }).click();
     await shot("14-timeline");
+  });
+  await step("required files were uploaded through the checklist", async () => {
+    if (uploads < 2) throw new Error(`only ${uploads} uploads; expected the Tax and Finance workbooks`);
+  });
+  await step("generate the committee memo", async () => {
+    await p.getByRole("tab", { name: "Overview" }).click();
+    const [download] = await Promise.all([p.waitForEvent("download", { timeout: 90000 }), p.getByRole("button", { name: "Generate memo (PDF)" }).click()]);
+    await download.saveAs(`${out}/memo.pdf`);
+    await p.waitForSelector(".memo-list li", { timeout: T });
+    log.push("     saved " + download.suggestedFilename());
+    await shot("15-memo-generated");
+  });
+  await step("start a new submission from this one", async () => {
+    await p.goto(U + "#/reuse");
+    await p.waitForSelector(".register tbody tr", { timeout: T });
+    await shot("16-reuse");
+    await p.locator("tr", { hasText: title }).first().getByRole("button", { name: "Use as starting point" }).click();
+    await p.waitForSelector(".notice.info", { timeout: T });
+    const copied = await p.getByLabel("Proposal title").inputValue();
+    if (!copied.startsWith("Copy of " + title)) throw new Error("title was " + copied);
+    if ((await p.getByLabel("Brief business description").inputValue()) === "") throw new Error("description was not copied");
+    if ((await p.getByLabel(/^Signatory 1/).inputValue()) !== "") throw new Error("signatories were copied");
+    await shot("17-copy-onboarding");
+  });
+  await step("copy: choose a slot and signatories, submit, approve", async () => {
+    await p.click('a:has-text("Choose a slot from the calendar")');
+    await p.waitForSelector(".slot.open", { timeout: T });
+    await p.locator(".slot.open").last().click();
+    await p.waitForSelector(".form-grid .next-title", { timeout: T });
+    for (let i = 1; i <= 5; i++) await p.getByLabel(new RegExp("^Signatory " + i)).selectOption({ index: 1 });
+    await p.getByRole("button", { name: "Submit request" }).click();
+    await p.waitForSelector('.ws-badges :text("Awaiting Onboarding Review")', { timeout: T });
+    await p.getByRole("button", { name: "Approve and unlock checklist" }).click();
+    await p.waitForSelector('.ws-badges :text("Checklist in Progress")', { timeout: T });
+  });
+  await step("copy: checklist opens prefilled, files not carried over", async () => {
+    await p.getByRole("tab", { name: "Checklist" }).click();
+    await p.waitForSelector(".cl-body .fui-Field", { timeout: T });
+    if ((await p.locator(".cl-body textarea").first().inputValue()) === "") throw new Error("first answer was not prefilled");
+    await p.waitForSelector('.cl-head :text("Ready to Submit")', { timeout: T });
+    await shot("18-copy-checklist-prefilled");
+    await p.locator(".cl-item", { hasText: "Tax" }).click();
+    await p.waitForSelector("text=No file uploaded yet", { timeout: T });
+    await shot("19-copy-needs-file");
   });
   await step("phone-width calendar has no sideways scroll", async () => {
     await p.setViewportSize({ width: 420, height: 800 });

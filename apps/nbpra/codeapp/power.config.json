@@ -108,6 +108,16 @@
           "entitySetName": "teams",
           "logicalName": "team",
           "isHidden": false
+        },
+        "evidenceattachments": {
+          "entitySetName": "nbpra_evidences",
+          "logicalName": "nbpra_evidence",
+          "isHidden": false
+        },
+        "exportpackages": {
+          "entitySetName": "nbpra_exportpackages",
+          "logicalName": "nbpra_exportpackage",
+          "isHidden": false
         }
       },
       "environmentVariableName": ""

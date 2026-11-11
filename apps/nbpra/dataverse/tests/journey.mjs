@@ -45,8 +45,9 @@ console.log(`     acting as ${me.fullName}${me.isAdmin ? " (administrator)" : ""
 
 // A requestable slot with free capacity in a future open meeting.
 const slots = (await api("GET", `nbpra_slots?$select=nbpra_slotreference,nbpra_activeallocationcount,nbpra_capacity&$filter=nbpra_status eq ${B} and nbpra_startat gt ${new Date().toISOString()}&$orderby=nbpra_startat desc&$expand=nbpra_meeting($select=nbpra_status)`)).value;
-const slot = slots.find((s) => s.nbpra_meeting?.nbpra_status === B + 1 && (s.nbpra_activeallocationcount ?? 0) < s.nbpra_capacity);
-if (!slot) throw new Error("No free slot in an open meeting; run seed.mjs.");
+const free = slots.filter((s) => s.nbpra_meeting?.nbpra_status === B + 1 && (s.nbpra_activeallocationcount ?? 0) < s.nbpra_capacity);
+const [slot, secondSlot] = free;
+if (!secondSlot) throw new Error("Needs two free slots in an open meeting; run seed.mjs.");
 
 const title = `Journey test ${new Date().toISOString().slice(0, 16)}`;
 const id = expect("create draft", await wf("saveOnboarding", "", { Payload: JSON.stringify({ title }) }), "accepted").Data;
@@ -63,20 +64,46 @@ console.log(`     checklist unlocked with ${sections.length} sections`);
 const answersFor = async (s, onlyFirst = false) => {
   const qs = (await api("GET", `nbpra_questiondefs?$select=nbpra_answertype,nbpra_isrequired&$filter=_nbpra_sectiondef_value eq ${s._nbpra_sectiondef_value}&$orderby=nbpra_displayorder&$expand=nbpra_questiondef_nbpra_questionoption_questiondef($select=nbpra_valuecode)`).catch(async () => api("GET", `nbpra_questiondefs?$select=nbpra_answertype,nbpra_isrequired&$filter=_nbpra_sectiondef_value eq ${s._nbpra_sectiondef_value}&$orderby=nbpra_displayorder`))).value;
   const value = (t) => ({ [B + 2]: "false", [B + 5]: "0", [B + 6]: "0", [B + 7]: "2027-03-01", [B + 3]: "LOW" })[t] ?? "Journey test answer.";
-  return (onlyFirst ? qs.slice(0, 1) : qs).map((q) => ({ q: q.nbpra_questiondefid, v: value(q.nbpra_answertype) }));
+  const plain = qs.filter((q) => q.nbpra_answertype !== FILE);
+  return (onlyFirst ? plain.slice(0, 1) : plain).map((q) => ({ q: q.nbpra_questiondefid, v: value(q.nbpra_answertype) }));
 };
+const FILE = B + 9;
+const fileQuestions = async (s) => (await api("GET", `nbpra_questiondefs?$select=nbpra_code&$filter=_nbpra_sectiondef_value eq ${s._nbpra_sectiondef_value} and nbpra_answertype eq ${FILE}`)).value;
+const workbook = Buffer.from("journey test workbook " + Date.now()).toString("base64");
+let evidenceId;
 
 const first = sections[0];
 const partial = expect("save one answer", await wf("saveSection", first.nbpra_sectioninstanceid, { Payload: JSON.stringify(await answersFor(first, true)) }), "accepted");
 console.log(`     section status after a partial save: ${partial.Data}`);
 expect("submit incomplete section", await wf("submitSection", first.nbpra_sectioninstanceid), "validation_failed");
+let uploads = 0;
 for (const s of sections) {
+  const files = await fileQuestions(s);
   const r = await wf("saveSection", s.nbpra_sectioninstanceid, { Payload: JSON.stringify(await answersFor(s)) });
-  if (r.Outcome !== "accepted" || r.Data !== "Ready to Submit") expect(`save ${s.nbpra_name}`, { ...r, Outcome: r.Outcome === "accepted" ? `accepted but ${r.Data}` : r.Outcome }, "accepted");
+  const want = files.length ? "Draft" : "Ready to Submit";
+  if (r.Outcome !== "accepted" || r.Data !== want) expect(`save ${s.nbpra_name}`, { ...r, Outcome: r.Outcome === "accepted" ? `accepted but ${r.Data}, wanted ${want}` : r.Outcome }, "accepted");
+  for (const q of files) {
+    if (!uploads) {
+      expect(`submit ${s.nbpra_name} without its required file`, await wf("submitSection", s.nbpra_sectioninstanceid), "validation_failed");
+      expect("upload a file of the wrong type", await wf("uploadEvidence", s.nbpra_sectioninstanceid, { Payload: JSON.stringify({ q: q.nbpra_questiondefid, fileName: "notes.pdf", contentType: "application/pdf", base64: workbook }) }), "validation_failed");
+    }
+    const up = expect(`upload ${q.nbpra_code}`, await wf("uploadEvidence", s.nbpra_sectioninstanceid, { Payload: JSON.stringify({ q: q.nbpra_questiondefid, fileName: `${q.nbpra_code}.xlsx`, contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", base64: workbook }) }), "accepted");
+    evidenceId ??= up.Data;
+    uploads++;
+  }
   const sub = await wf("submitSection", s.nbpra_sectioninstanceid);
   if (sub.Outcome !== "accepted") expect(`submit ${s.nbpra_name}`, sub, "accepted");
 }
-console.log(`ok   saved and submitted all ${sections.length} sections (No and 0 answers counted as answered)`);
+console.log(`ok   saved and submitted all ${sections.length} sections (No and 0 answers counted as answered; ${uploads} required files uploaded)`);
+if (evidenceId) {
+  const d = expect("download the uploaded file", await wf("downloadEvidence", evidenceId), "accepted");
+  const same = d.Data && JSON.parse(d.Data).base64 === workbook;
+  if (!same) failures++;
+  console.log(`${same ? "ok  " : "FAIL"} downloaded file matches what was uploaded`);
+} else {
+  failures++;
+  console.log("FAIL no evidence questions found; run seed-checklist.mjs");
+}
 expect("edit a section under review", await wf("saveSection", first.nbpra_sectioninstanceid, { Payload: "[]" }), "validation_failed");
 expect("request signatories too early", await wf("requestSignatories", id), "validation_failed");
 
@@ -107,6 +134,32 @@ for (const [i, a] of seats.entries()) {
 console.log(`ok   ${seats.length} signatory approvals recorded; status ${await statusOf(id)}`);
 expect("final submit", await wf("finalSubmit", id), "accepted");
 expect("Kate authorizes committee attendance", await admin(id, "authorize"), "accepted");
+
+// Committee memo: stored as a PDF in the submission's export history.
+expect("save a non-PDF as the memo", await wf("saveExport", id, { Payload: JSON.stringify({ fileName: "memo.pdf", base64: workbook }) }), "validation_failed");
+const pdf = Buffer.from("%PDF-1.4\n% journey test memo\n").toString("base64");
+const memo = expect("save the committee memo", await wf("saveExport", id, { Payload: JSON.stringify({ fileName: "memo.pdf", base64: pdf }) }), "accepted");
+const back2 = await wf("downloadExport", memo.Data);
+console.log(`${back2.Data && JSON.parse(back2.Data).base64 === pdf ? "ok  " : (failures++, "FAIL")} memo downloads unchanged`);
+
+// Start from an earlier submission: content is copied, approvals, files and signatories are not.
+const copyId = expect("start a new draft from this submission", await wf("copySubmission", id), "accepted").Data;
+const copy = await api("GET", `nbpra_submissions(${copyId})?$select=nbpra_title,nbpra_businessarea,nbpra_summary`);
+console.log(`     copy is "${copy.nbpra_title}" in ${copy.nbpra_businessarea}`);
+const copySeats = (await api("GET", `nbpra_signatories?$select=nbpra_slotnumber&$filter=_nbpra_submission_value eq ${copyId} and _nbpra_person_value ne null`)).value.length;
+console.log(`${copySeats === 0 ? "ok  " : (failures++, "FAIL")} copy starts with no signatories (${copySeats})`);
+expect("submit the copy without slot or signatories", await wf("submitOnboarding", copyId), "validation_failed");
+expect("complete the copy's onboarding", await wf("saveOnboarding", copyId, { Payload: JSON.stringify({ ...intake, title: copy.nbpra_title, slotId: secondSlot.nbpra_slotid }) }), "accepted");
+expect("submit the copy", await wf("submitOnboarding", copyId), "accepted");
+expect("Kate approves the copy", await admin(copyId, "approveOnboarding"), "accepted");
+const copied = (await api("GET", `nbpra_sectioninstances?$select=nbpra_name,nbpra_status&$filter=_nbpra_submission_value eq ${copyId}`)).value;
+const ready = copied.filter((x) => x.nbpra_status === B + 2).length;
+const draft = copied.filter((x) => x.nbpra_status === B + 1).length;
+const okPrefill = ready + draft === copied.length && draft === uploads;
+if (!okPrefill) failures++;
+console.log(`${okPrefill ? "ok  " : "FAIL"} copy's checklist is prefilled: ${ready} sections ready to submit, ${draft} still need their file, of ${copied.length}`);
+const copyEvidence = (await api("GET", `nbpra_evidences?$select=nbpra_name&$filter=_nbpra_submission_value eq ${copyId}`)).value.length;
+console.log(`${copyEvidence === 0 ? "ok  " : (failures++, "FAIL")} no files were copied (${copyEvidence})`);
 
 const final = await statusOf(id);
 const events = (await api("GET", `nbpra_businessevents?$select=nbpra_action&$filter=_nbpra_submission_value eq ${id}`)).value.length;

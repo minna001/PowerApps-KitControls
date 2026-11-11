@@ -548,7 +548,7 @@
             null,
             null
           ],
-          "x-ms-optionsetmetadataid": "b556be30-a070-ec11-8941-000d3a1d98b6",
+          "x-ms-optionsetmetadataid": "f48a877b-d8da-f111-84e8-000d3a5b1b39",
           "x-ms-isGlobal": false,
           "x-ms-optionsetdisplayname": "Azure State",
           "x-ms-optionSetType": "Picklist"
@@ -805,7 +805,7 @@
             null,
             null
           ],
-          "x-ms-optionsetmetadataid": "b0dd6cb6-1d24-ec11-b6e5-000d3a8fdee8",
+          "x-ms-optionsetmetadataid": "f18a877b-d8da-f111-84e8-000d3a5b1b39",
           "x-ms-isGlobal": false,
           "x-ms-optionsetdisplayname": "Delete State",
           "x-ms-optionSetType": "Picklist"
@@ -1148,7 +1148,7 @@
             null,
             null
           ],
-          "x-ms-optionsetmetadataid": "96a18ca6-010d-f011-9989-7ced8d1c64db",
+          "x-ms-optionsetmetadataid": "68bce66c-fada-f111-84e8-000d3a5b1b39",
           "x-ms-isGlobal": false,
           "x-ms-optionsetdisplayname": "Is user bypassed by ip firewall",
           "x-ms-optionSetType": "Boolean"
@@ -1814,7 +1814,7 @@
             null,
             null
           ],
-          "x-ms-optionsetmetadataid": "e6bdddfe-41ea-ef11-be20-00224822ef84",
+          "x-ms-optionsetmetadataid": "f78a877b-d8da-f111-84e8-000d3a5b1b39",
           "x-ms-isGlobal": false,
           "x-ms-optionsetdisplayname": "System Managed User Type",
           "x-ms-optionSetType": "Picklist"

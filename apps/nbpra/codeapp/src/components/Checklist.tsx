@@ -3,7 +3,8 @@ import { Button, Field, Input, Radio, RadioGroup, Select, Textarea } from "@flue
 import type { DataSource } from "../data/source";
 import type { OpResult, Question, SectionDetail, SectionSummary } from "../data/types";
 import { SectionPill } from "./bits";
-import { Notice } from "./ui";
+import { Notice, formatDateTime } from "./ui";
+import { MAX_FILE_BYTES, fileSize, readFile, saveToDisk } from "../files";
 
 /** Section list on the left, the selected section's questions on the right. */
 export function Checklist({ source, sections, canEdit, onChanged }: { source: DataSource; sections: SectionSummary[]; canEdit: boolean; onChanged: () => void }) {
@@ -36,7 +37,30 @@ export function Checklist({ source, sections, canEdit, onChanged }: { source: Da
     setValues({ ...values, [id]: v });
     setDirty(true);
   };
-  const missing = (detail?.questions ?? []).filter((q) => q.required && !(values[q.id] ?? "").trim()).length;
+  const missing = (detail?.questions ?? []).filter((q) => q.required && (q.type === "File" ? !q.file : !(values[q.id] ?? "").trim())).length;
+
+  async function onUpload(q: Question, file: File) {
+    if (file.size > MAX_FILE_BYTES) {
+      setResult({ ok: false, error: `"${file.name}" is ${fileSize(file.size)}. The limit is ${fileSize(MAX_FILE_BYTES)}.` });
+      return;
+    }
+    setBusy(true);
+    // Typed answers are saved first so reloading the section after the upload cannot lose them.
+    if (!dirty || (await save())) {
+      const r = await source.uploadEvidence(selected!, q.id, await readFile(file));
+      setResult(r.ok ? { ok: true, message: `Uploaded ${file.name}.`, data: undefined } : r);
+      if (r.ok) {
+        await load(selected!);
+        onChanged();
+      }
+    }
+    setBusy(false);
+  }
+  async function onDownload(id: string) {
+    const r = await source.downloadFile("evidence", id);
+    if (r.ok) saveToDisk(r.data);
+    else setResult(r);
+  }
 
   async function save(): Promise<boolean> {
     const r = await source.saveSection(selected!, (detail?.questions ?? []).map((q) => ({ q: q.id, v: values[q.id] ?? "" })));
@@ -98,7 +122,7 @@ export function Checklist({ source, sections, canEdit, onChanged }: { source: Da
             {detail.questions.length === 0 && <p className="muted">This section has no questions configured.</p>}
             <div className="fields">
               {detail.questions.map((q) => (
-                <QuestionField key={q.id} q={q} value={values[q.id] ?? ""} disabled={!editable} onChange={(v) => set(q.id, v)} />
+                <QuestionField key={q.id} q={q} value={values[q.id] ?? ""} disabled={!editable || busy} onChange={(v) => set(q.id, v)} onUpload={(f) => onUpload(q, f)} onDownload={onDownload} />
               ))}
             </div>
 
@@ -110,7 +134,7 @@ export function Checklist({ source, sections, canEdit, onChanged }: { source: Da
                 <Button disabled={busy} onClick={onSave}>
                   Save answers
                 </Button>
-                <span className="muted">{busy ? "Working…" : missing > 0 ? `${missing} required answer${missing === 1 ? "" : "s"} still needed` : dirty ? "Unsaved changes" : "Ready to submit"}</span>
+                <span className="muted">{busy ? "Working…" : missing > 0 ? `${missing} required answer${missing === 1 ? "" : "s"} or file${missing === 1 ? "" : "s"} still needed` : dirty ? "Unsaved changes" : "Ready to submit"}</span>
               </div>
             )}
           </>
@@ -120,9 +144,41 @@ export function Checklist({ source, sections, canEdit, onChanged }: { source: Da
   );
 }
 
-function QuestionField({ q, value, disabled, onChange }: { q: Question; value: string; disabled: boolean; onChange: (v: string) => void }) {
+function QuestionField({ q, value, disabled, onChange, onUpload, onDownload }: { q: Question; value: string; disabled: boolean; onChange: (v: string) => void; onUpload: (f: File) => void; onDownload: (id: string) => void }) {
   const label = q.label;
   switch (q.type) {
+    case "File":
+      return (
+        <Field label={label} required={q.required} hint={q.accept?.length ? `Accepted: ${q.accept.map((x) => "." + x).join(", ")}. Up to ${fileSize(MAX_FILE_BYTES)}.` : `Up to ${fileSize(MAX_FILE_BYTES)}.`}>
+          <div className="file-q">
+            {q.file ? (
+              <div className="file-current">
+                <button type="button" className="link plain" onClick={() => onDownload(q.file!.id)}>
+                  {q.file.name}
+                </button>
+                <span className="muted">
+                  {" "}
+                  · {fileSize(q.file.sizeBytes)} · version {q.file.version} · uploaded {formatDateTime(q.file.uploadedAt)}
+                </span>
+              </div>
+            ) : (
+              <div className="muted">No file uploaded yet.</div>
+            )}
+            {!disabled && (
+              <input
+                type="file"
+                aria-label={`${q.file ? "Replace" : "Upload"} file for: ${label}`}
+                accept={q.accept?.map((x) => "." + x).join(",")}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = "";
+                  if (f) onUpload(f);
+                }}
+              />
+            )}
+          </div>
+        </Field>
+      );
     case "Boolean":
       return (
         <Field label={label} required={q.required}>

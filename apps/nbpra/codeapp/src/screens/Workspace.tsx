@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import { Tab, TabList } from "@fluentui/react-components";
 import { ErrorCircleRegular } from "@fluentui/react-icons";
 import type { DataSource } from "../data/source";
-import { PHASES, phaseIndex, type BusinessEvent, type OpResult, type SubmissionDetail, type UserContext } from "../data/types";
+import { PHASES, phaseIndex, type BusinessEvent, type ExportInfo, type OpResult, type SubmissionDetail, type UserContext } from "../data/types";
+import { buildMemo } from "../memo";
+import { saveToDisk } from "../files";
+import { formatDateTime } from "../components/ui";
 import { Checklist } from "../components/Checklist";
 import { Notice } from "../components/ui";
 import { Button } from "@fluentui/react-components";
@@ -25,10 +28,12 @@ export function Workspace({ source, user, id, initialTab }: { source: DataSource
   const [busy, setBusy] = useState(false);
 
   const [events, setEvents] = useState<BusinessEvent[]>([]);
+  const [exports, setExports] = useState<ExportInfo[]>([]);
 
   const load = () => {
     source.getSubmission(id).then(setS);
     source.listEvents(id).then(setEvents);
+    source.listExports(id).then(setExports);
   };
   useEffect(() => {
     setS(null);
@@ -55,6 +60,27 @@ export function Workspace({ source, user, id, initialTab }: { source: DataSource
     setResult(r);
     setBusy(false);
     if (r.ok) load();
+  }
+
+  async function generateMemo() {
+    setBusy(true);
+    try {
+      const memo = await buildMemo(source, user, id);
+      const saved = await source.saveMemo(id, memo.fileName, memo.base64);
+      setResult(saved);
+      if (saved.ok) {
+        saveToDisk({ fileName: memo.fileName, contentType: "application/pdf", base64: memo.base64 });
+        load();
+      }
+    } catch (e) {
+      setResult({ ok: false, error: e instanceof Error ? e.message : "The memo could not be generated." });
+    }
+    setBusy(false);
+  }
+  async function downloadMemo(exportId: string) {
+    const r = await source.downloadFile("export", exportId);
+    if (r.ok) saveToDisk(r.data);
+    else setResult(r);
   }
 
   // What the business owner can do next, if anything.
@@ -235,6 +261,30 @@ export function Workspace({ source, user, id, initialTab }: { source: DataSource
                 <DecisionPill state={p.state} />
               </div>
             ))}
+          </div>
+
+          <div className="panel">
+            <div className="panel-head">Committee memo</div>
+            <div className="panel-body">
+              <p className="muted decision-hint">A PDF brief of this submission for the committee: details, approvals, checklist responses, evidence list and decision history.</p>
+              {(isOwner || user.isAdmin) && !source.isSample && (
+                <Button disabled={busy} onClick={generateMemo}>
+                  {busy ? "Working…" : "Generate memo (PDF)"}
+                </Button>
+              )}
+              {exports.length > 0 && (
+                <ul className="memo-list">
+                  {exports.slice(0, 4).map((x) => (
+                    <li key={x.id}>
+                      <button className="link plain" onClick={() => downloadMemo(x.id)}>
+                        {x.type} memo
+                      </button>
+                      <span className="muted"> · {formatDateTime(x.generatedAt)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
 
           <div className="panel">

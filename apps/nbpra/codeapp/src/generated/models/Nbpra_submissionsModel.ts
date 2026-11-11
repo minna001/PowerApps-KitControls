@@ -35,6 +35,7 @@ export interface Nbpra_submissionsBase {
   "nbpra_checklisttemplate@odata.bind"?: string;
   nbpra_committeeauthorizedat?: string;
   "nbpra_committeeauthorizedby@odata.bind"?: string;
+  "nbpra_copiedfrom@odata.bind"?: string;
   "nbpra_currentslotrequest@odata.bind"?: string;
   nbpra_desiredtiming?: string;
   nbpra_finalsubmittedat?: string;
@@ -82,6 +83,8 @@ export interface Nbpra_submissions extends Nbpra_submissionsBase {
   _nbpra_checklisttemplate_value?: string;
   nbpra_committeeauthorizedby?: object;
   _nbpra_committeeauthorizedby_value?: string;
+  nbpra_copiedfrom?: object;
+  _nbpra_copiedfrom_value?: string;
   nbpra_currentslotrequest?: object;
   _nbpra_currentslotrequest_value?: string;
   nbpra_sponsor?: object;

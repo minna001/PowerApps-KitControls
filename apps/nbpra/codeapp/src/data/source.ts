@@ -2,6 +2,8 @@ import type {
   ActionResult,
   AdminAction,
   BusinessEvent,
+  ExportInfo,
+  FileContent,
   Intake,
   MeetingInfo,
   OpResult,
@@ -39,6 +41,14 @@ export interface DataSource {
   getSection(sectionId: string): Promise<SectionDetail | undefined>;
   saveSection(sectionId: string, answers: { q: string; v: string }[]): Promise<OpResult<string>>;
   submitSection(sectionId: string): Promise<OpResult>;
+
+  // Evidence, memo and reuse
+  uploadEvidence(sectionId: string, questionId: string, file: FileContent): Promise<OpResult<string>>;
+  downloadFile(kind: "evidence" | "export", id: string): Promise<OpResult<FileContent>>;
+  listExports(submissionId: string): Promise<ExportInfo[]>;
+  saveMemo(submissionId: string, fileName: string, base64: string): Promise<OpResult<string>>;
+  /** New draft holding an earlier submission's content; never its approvals, files or signatories. */
+  copySubmission(submissionId: string): Promise<OpResult<string>>;
 
   // Functional review and signatories
   listReviewTasks(): Promise<ReviewTask[]>;

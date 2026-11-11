@@ -81,7 +81,8 @@
       ["committeeauthorizedby", "lookup:systemuser", false, ""],
       ["lastbusinessactivityat", "datetime", false, ""],
       ["withdrawnat", "datetime", false, ""],
-      ["withdrawnreason", "memo", false, ""]
+      ["withdrawnreason", "memo", false, ""],
+      ["copiedfrom", "lookup:submission", false, "Earlier submission this one was started from; content only, never approvals"]
     ], "keys": [["reference"]] },
 
     { "name": "slotrequest", "display": "Slot Request", "ownership": "user", "columns": [

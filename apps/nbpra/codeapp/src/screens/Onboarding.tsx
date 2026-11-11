@@ -75,6 +75,12 @@ export function Onboarding({ source, user, id, pickedSlot }: { source: DataSourc
     <>
       <PageHead eyebrow="New submission" title="Initial onboarding" />
       <p className="lead">Save a draft at any point. When you submit, the request goes to the NBPRA administrator; the full checklist opens once they approve it.</p>
+      {intake.copiedFrom && (
+        <div className="notice info">
+          Started from <span className="mono">{intake.copiedFrom}</span>. Its checklist answers will be waiting as drafts once this request is approved. Choose a slot and five signatories here; those, files and approvals are never
+          copied.
+        </div>
+      )}
       <Notice result={result} />
 
       <div className="form-grid">

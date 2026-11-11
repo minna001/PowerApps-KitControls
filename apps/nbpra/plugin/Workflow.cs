@@ -28,6 +28,11 @@ namespace Nbpra.Plugins
     ///   requestSignatories  TargetId = submission
     ///   decideSignatory     TargetId = approval assignment; Outcome = approve | return
     ///   finalSubmit         TargetId = submission
+    ///   uploadEvidence      TargetId = section instance; Payload = {"q","fileName","contentType","base64"} -> Data: evidence id
+    ///   downloadEvidence    TargetId = evidence -> Data: {"fileName","contentType","base64"}
+    ///   saveExport          TargetId = submission; Payload = {"fileName","base64","exportType"} -> Data: export id
+    ///   downloadExport      TargetId = export package -> Data: {"fileName","contentType","base64"}
+    ///   copySubmission      TargetId = earlier submission -> Data: new submission id
     ///
     /// Runs in the operation's transaction as SYSTEM, recording the human actor.
     /// Checks come before writes; a refused request writes nothing.
@@ -52,6 +57,16 @@ namespace Nbpra.Plugins
         {
             [DataMember(Name = "q")] public string Question;
             [DataMember(Name = "v")] public string Value;
+        }
+
+        [DataContract]
+        private sealed class FileIn
+        {
+            [DataMember(Name = "q")] public string Question;
+            [DataMember(Name = "fileName")] public string FileName;
+            [DataMember(Name = "contentType")] public string ContentType;
+            [DataMember(Name = "base64")] public string Base64;
+            [DataMember(Name = "exportType")] public string ExportType;
         }
 
         private sealed class Refused : Exception
@@ -100,6 +115,11 @@ namespace Nbpra.Plugins
                     case "requestSignatories": RequestSignatories(Id(target)); message = "Package sent to the five signatories."; break;
                     case "decideSignatory": message = DecideSignatory(Id(target), outcome, comment); break;
                     case "finalSubmit": FinalSubmit(Id(target)); message = "Final submission made. Awaiting the NBPRA administrator."; break;
+                    case "uploadEvidence": data = UploadEvidence(Id(target), payload); message = "File uploaded."; break;
+                    case "downloadEvidence": data = DownloadFile("nbpra_evidence", Id(target)); break;
+                    case "saveExport": data = SaveExport(Id(target), payload).ToString(); message = "Memo saved to the submission's export history."; break;
+                    case "downloadExport": data = DownloadFile("nbpra_exportpackage", Id(target)); break;
+                    case "copySubmission": data = CopySubmission(Id(target)).ToString(); message = "New draft created from the earlier submission."; break;
                     default: throw Invalid("Unknown operation.");
                 }
             }
@@ -374,8 +394,7 @@ namespace Nbpra.Plugins
             return (inst, sub);
         }
 
-        private List<Entity> Questions(Guid sectionDefId) =>
-            Rows("nbpra_questiondef", new ColumnSet("nbpra_code", "nbpra_label", "nbpra_answertype", "nbpra_isrequired"), ("nbpra_sectiondef", sectionDefId));
+        private List<Entity> Questions(Guid sectionDefId) => Sections.Questions(svc, sectionDefId);
 
         private string SaveSection(Guid instanceId, string payload)
         {
@@ -389,38 +408,18 @@ namespace Nbpra.Plugins
             var questions = Questions(defId);
             var instRef = inst.ToEntityReference();
 
-            // Reuse the open draft revision, or start a new one after a return.
-            Entity revision = null;
-            var currentRef = inst.GetAttributeValue<EntityReference>("nbpra_currentrevision");
-            if (currentRef != null)
-            {
-                var cur = svc.Retrieve("nbpra_sectionrevision", currentRef.Id, new ColumnSet("nbpra_state", "nbpra_revisionnumber"));
-                if (Opt(cur, "nbpra_state") == C.RevisionState.Draft) revision = cur;
-            }
-            if (revision == null)
-            {
-                var all = Rows("nbpra_sectionrevision", new ColumnSet("nbpra_revisionnumber"), ("nbpra_sectioninstance", instanceId));
-                var number = (all.Max(r => r.GetAttributeValue<int?>("nbpra_revisionnumber")) ?? 0) + 1;
-                revision = new Entity("nbpra_sectionrevision");
-                revision["nbpra_name"] = inst.GetAttributeValue<string>("nbpra_name") + " · rev " + number;
-                revision["nbpra_sectioninstance"] = instRef;
-                revision["nbpra_revisionnumber"] = number;
-                revision["nbpra_state"] = O(C.RevisionState.Draft);
-                revision["ownerid"] = actorRef;
-                if (currentRef != null) revision["nbpra_supersedes"] = currentRef;
-                revision.Id = svc.Create(revision);
-            }
-            var revRef = new EntityReference("nbpra_sectionrevision", revision.Id);
+            var revisionId = Sections.EnsureDraft(svc, inst, actorRef);
+            var revRef = new EntityReference("nbpra_sectionrevision", revisionId);
 
-            var existing = Rows("nbpra_answer", new ColumnSet("nbpra_questiondef"), ("nbpra_sectionrevision", revision.Id))
+            var existing = Rows("nbpra_answer", new ColumnSet("nbpra_questiondef"), ("nbpra_sectionrevision", revisionId))
                 .ToDictionary(a => a.GetAttributeValue<EntityReference>("nbpra_questiondef").Id, a => a.Id);
-            var answered = new HashSet<Guid>();
             foreach (var a in answers ?? new List<AnswerIn>())
             {
                 if (!Guid.TryParse(a.Question, out var qid)) continue;
                 var q = questions.FirstOrDefault(x => x.Id == qid);
                 if (q == null) throw Invalid("An answer refers to a question that is not in this section.");
                 var type = Opt(q, "nbpra_answertype");
+                if (type == C.AnswerType.File) continue; // answered by uploadEvidence
                 var v = a.Value?.Trim();
                 var has = !string.IsNullOrEmpty(v);
 
@@ -453,7 +452,6 @@ namespace Nbpra.Plugins
                     }
                     else if (type == C.AnswerType.Choice) row["nbpra_optioncode"] = v;
                     else row["nbpra_textvalue"] = v;
-                    answered.Add(qid);
                 }
                 if (row.Id == Guid.Empty)
                 {
@@ -467,20 +465,7 @@ namespace Nbpra.Plugins
                 else svc.Update(row);
             }
 
-            // Questions not in this save keep their stored answer.
-            var sent = new HashSet<Guid>((answers ?? new List<AnswerIn>()).Select(a => Guid.TryParse(a.Question, out var g) ? g : Guid.Empty));
-            foreach (var kept in Rows("nbpra_answer", new ColumnSet("nbpra_questiondef", "nbpra_isanswered"), ("nbpra_sectionrevision", revision.Id)))
-            {
-                var qid = kept.GetAttributeValue<EntityReference>("nbpra_questiondef").Id;
-                if (!sent.Contains(qid) && kept.GetAttributeValue<bool?>("nbpra_isanswered") == true) answered.Add(qid);
-            }
-
-            var complete = questions.Where(q => q.GetAttributeValue<bool?>("nbpra_isrequired") == true).All(q => answered.Contains(q.Id));
-            var newStatus = complete ? C.SectionStatus.ReadyToSubmit : C.SectionStatus.Draft;
-            var up = new Entity("nbpra_sectioninstance", instanceId);
-            up["nbpra_status"] = O(newStatus);
-            up["nbpra_currentrevision"] = revRef;
-            svc.Update(up);
+            var newStatus = Sections.Recompute(svc, instanceId, defId, revisionId);
             Touch(sub.Id);
             return C.SectionStatus.Label(newStatus);
         }
@@ -496,10 +481,8 @@ namespace Nbpra.Plugins
             if (Opt(revision, "nbpra_state") != C.RevisionState.Draft) throw Resolved("This revision has already been submitted.");
 
             var defId = inst.GetAttributeValue<EntityReference>("nbpra_sectiondef").Id;
-            var answered = Rows("nbpra_answer", new ColumnSet("nbpra_questiondef", "nbpra_isanswered"), ("nbpra_sectionrevision", revRef.Id))
-                .Where(a => a.GetAttributeValue<bool?>("nbpra_isanswered") == true).Select(a => a.GetAttributeValue<EntityReference>("nbpra_questiondef").Id).ToList();
-            var unanswered = Questions(defId).Where(q => q.GetAttributeValue<bool?>("nbpra_isrequired") == true && !answered.Contains(q.Id)).ToList();
-            if (unanswered.Count > 0) throw Invalid(unanswered.Count + " required question(s) still need an answer.");
+            var unanswered = Sections.MissingRequired(svc, defId, revRef.Id);
+            if (unanswered > 0) throw Invalid(unanswered + " required question(s) still need an answer or a file.");
 
             // FR-17: a missing route or an empty group is an error, never an approval.
             var routes = Rows("nbpra_reviewroute", new ColumnSet("nbpra_reviewteam", "nbpra_completionpolicy"), ("nbpra_sectiondef", defId), ("nbpra_isactive", true));
@@ -542,6 +525,164 @@ namespace Nbpra.Plugins
             svc.Update(up);
             Touch(sub.Id);
             Event(subRef, C.EventType.Section, name + " submitted for review", null, null, null, name + " rev " + number, "nbpra_sectionrevision", revRef.Id, revRef.Id.ToString("N") + ":submitted");
+        }
+
+        private static byte[] FromBase64(string b64)
+        {
+            try
+            {
+                return Convert.FromBase64String(b64 ?? string.Empty);
+            }
+            catch (FormatException)
+            {
+                throw Invalid("The file could not be read.");
+            }
+        }
+
+        private static string Extension(string fileName)
+        {
+            var i = (fileName ?? string.Empty).LastIndexOf('.');
+            return i < 0 ? string.Empty : fileName.Substring(i + 1).ToLowerInvariant();
+        }
+
+        private string UploadEvidence(Guid instanceId, string payload)
+        {
+            var f = Parse<FileIn>(payload);
+            var (inst, sub) = LoadSection(instanceId);
+            var status = Opt(inst, "nbpra_status");
+            if (status == C.SectionStatus.UnderReview) throw Invalid("This section is under review and cannot be changed.");
+            if (status == C.SectionStatus.Approved) throw Invalid("This section is approved. Reopening an approved section is not available yet.");
+            var defId = inst.GetAttributeValue<EntityReference>("nbpra_sectiondef").Id;
+            var q = Guid.TryParse(f.Question, out var qid) ? Questions(defId).FirstOrDefault(x => x.Id == qid) : null;
+            if (q == null || Opt(q, "nbpra_answertype") != C.AnswerType.File) throw Invalid("That question does not take a file.");
+
+            var name = (f.FileName ?? string.Empty).Trim();
+            var ext = Extension(name);
+            if (name.Length == 0 || name.Length > 200) throw Invalid("The file needs a name of up to 200 characters.");
+            // FR-14 / NFR-06: only listed formats, checked on the server.
+            var allowed = (q.GetAttributeValue<string>("nbpra_validationrule") ?? string.Empty).Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim('.').ToLowerInvariant()).ToArray();
+            if (allowed.Length == 0) allowed = Sections.AllowedExtensions;
+            if (!Sections.AllowedExtensions.Contains(ext) || !allowed.Contains(ext)) throw Invalid("This question needs a file of type: " + string.Join(", ", allowed) + ".");
+            var bytes = FromBase64(f.Base64);
+            if (bytes.Length == 0) throw Invalid("The file is empty.");
+            if (bytes.Length > Sections.MaxFileBytes) throw Invalid("The file is larger than the " + (Sections.MaxFileBytes / 1024 / 1024) + " MB limit.");
+
+            var revisionId = Sections.EnsureDraft(svc, inst, actorRef);
+            // A replacement is a new version; the earlier file is kept and marked superseded.
+            var previous = Sections.CurrentEvidence(svc, revisionId).Where(e => e.GetAttributeValue<EntityReference>("nbpra_questiondef")?.Id == qid).ToList();
+            var version = previous.Count == 0 ? 1 : previous.Max(e => e.GetAttributeValue<int?>("nbpra_versionnumber") ?? 1) + 1;
+            foreach (var old in previous)
+            {
+                var o = new Entity("nbpra_evidence", old.Id);
+                o["nbpra_uploadstatus"] = O(C.UploadStatus.Superseded);
+                svc.Update(o);
+            }
+            var id = Sections.StoreEvidence(svc, sub.ToEntityReference(), revisionId, q.ToEntityReference(), name, string.IsNullOrWhiteSpace(f.ContentType) ? "application/octet-stream" : f.ContentType,
+                bytes, actorRef, version, previous.OrderByDescending(e => e.GetAttributeValue<int?>("nbpra_versionnumber") ?? 0).FirstOrDefault()?.ToEntityReference());
+            Sections.Recompute(svc, instanceId, defId, revisionId);
+            Touch(sub.Id);
+            Event(sub.ToEntityReference(), C.EventType.Evidence, (version == 1 ? "Evidence uploaded: " : "Evidence replaced (version " + version + "): ") + name, null, null, null,
+                inst.GetAttributeValue<string>("nbpra_name"), "nbpra_evidence", id, id.ToString("N") + ":uploaded");
+            return id.ToString();
+        }
+
+        /// <summary>Who may read a submission's files: its owner, an administrator, a named signatory or a member of one of its review groups.</summary>
+        private void RequireReader(Guid submissionId)
+        {
+            var sub = LoadSubmission(submissionId);
+            if (sub.GetAttributeValue<EntityReference>("nbpra_businessowner")?.Id == actor || AdminDecision.IsAdmin(svc, actor)) return;
+            if (Rows("nbpra_signatory", new ColumnSet(false), ("nbpra_submission", submissionId), ("nbpra_iscurrent", true), ("nbpra_person", actor)).Count > 0) return;
+            foreach (var team in Rows("nbpra_approvalrequest", new ColumnSet("nbpra_reviewteam"), ("nbpra_submission", submissionId)).Select(r => r.GetAttributeValue<EntityReference>("nbpra_reviewteam")).Where(t => t != null).Select(t => t.Id).Distinct())
+                if (InTeam(team)) return;
+            throw Denied("You do not have access to this submission's files.");
+        }
+
+        private string DownloadFile(string table, Guid id)
+        {
+            Entity row;
+            try
+            {
+                row = svc.Retrieve(table, id, table == "nbpra_evidence" ? new ColumnSet("nbpra_submission", "nbpra_originalfilename", "nbpra_contenttype") : new ColumnSet("nbpra_submission", "nbpra_filename"));
+            }
+            catch (Exception)
+            {
+                throw Invalid("File not found.");
+            }
+            RequireReader(row.GetAttributeValue<EntityReference>("nbpra_submission").Id);
+            var bytes = Sections.Download(svc, row.ToEntityReference());
+            var name = row.GetAttributeValue<string>(table == "nbpra_evidence" ? "nbpra_originalfilename" : "nbpra_filename");
+            var type = table == "nbpra_evidence" ? row.GetAttributeValue<string>("nbpra_contenttype") : "application/pdf";
+            return "{\"fileName\":\"" + Js(name) + "\",\"contentType\":\"" + Js(type) + "\",\"base64\":\"" + Convert.ToBase64String(bytes) + "\"}";
+        }
+
+        private Guid SaveExport(Guid submissionId, string payload)
+        {
+            var f = Parse<FileIn>(payload);
+            var sub = LoadSubmission(submissionId);
+            if (sub.GetAttributeValue<EntityReference>("nbpra_businessowner")?.Id != actor && !AdminDecision.IsAdmin(svc, actor))
+                throw Denied("Only the business owner or an administrator can generate the memo.");
+            var bytes = FromBase64(f.Base64);
+            if (bytes.Length < 5 || bytes[0] != (byte)'%' || bytes[1] != (byte)'P' || bytes[2] != (byte)'D' || bytes[3] != (byte)'F') throw Invalid("The memo must be a PDF.");
+            if (bytes.Length > Sections.MaxFileBytes) throw Invalid("The memo is larger than the " + (Sections.MaxFileBytes / 1024 / 1024) + " MB limit.");
+            var st = Opt(sub, "nbpra_status");
+            var type = st == C.SubmissionStatus.AuthorizedForCommittee ? C.ExportType.CommitteeAuthorized : st == C.SubmissionStatus.AwaitingFinalAdminReview ? C.ExportType.Submitted : C.ExportType.Draft;
+            var name = string.IsNullOrWhiteSpace(f.FileName) ? "NBPRA memo.pdf" : f.FileName.Trim();
+
+            var e = new Entity("nbpra_exportpackage");
+            e["nbpra_name"] = name;
+            e["nbpra_submission"] = sub.ToEntityReference();
+            e["nbpra_packagerevision"] = sub.GetAttributeValue<int?>("nbpra_packagerevision") ?? 0;
+            e["nbpra_exporttype"] = O(type);
+            e["nbpra_requestedby"] = actorRef;
+            e["nbpra_requestedat"] = now;
+            e["nbpra_generatedat"] = now;
+            e["nbpra_status"] = O(C.ExportStatus.Pending);
+            e["nbpra_filename"] = name;
+            e["nbpra_sizebytes"] = (long)bytes.Length;
+            e["nbpra_templateversion"] = "memo-1";
+            e["ownerid"] = actorRef;
+            var id = svc.Create(e);
+            Sections.Upload(svc, new EntityReference("nbpra_exportpackage", id), "nbpra_file", name, "application/pdf", bytes);
+            var done = new Entity("nbpra_exportpackage", id);
+            done["nbpra_status"] = O(C.ExportStatus.Generated);
+            svc.Update(done);
+            Event(sub.ToEntityReference(), C.EventType.Export, "Committee memo generated (" + (type == C.ExportType.Draft ? "draft" : type == C.ExportType.Submitted ? "submitted package" : "committee-authorized") + ")", null, null, null,
+                "Package rev " + (sub.GetAttributeValue<int?>("nbpra_packagerevision") ?? 0), "nbpra_exportpackage", id, id.ToString("N") + ":generated");
+            return id;
+        }
+
+        private Guid CopySubmission(Guid sourceId)
+        {
+            Entity src;
+            try
+            {
+                src = svc.Retrieve("nbpra_submission", sourceId, new ColumnSet("nbpra_title", "nbpra_name", "nbpra_reference", "nbpra_businessowner", "nbpra_businessarea", "nbpra_proposaltype", "nbpra_summary", "nbpra_scope", "nbpra_sponsor"));
+            }
+            catch (Exception)
+            {
+                throw Invalid("Submission not found.");
+            }
+            if (src.GetAttributeValue<EntityReference>("nbpra_businessowner")?.Id != actor && !AdminDecision.IsAdmin(svc, actor))
+                throw Denied("You can only start from one of your own submissions.");
+            var title = "Copy of " + (src.GetAttributeValue<string>("nbpra_title") ?? src.GetAttributeValue<string>("nbpra_name"));
+            if (title.Length > 200) title = title.Substring(0, 200);
+
+            // Content only. Slot, signatories, approvals, files and history all start fresh.
+            var sub = new Entity("nbpra_submission");
+            sub["nbpra_status"] = O(C.SubmissionStatus.OnboardingDraft);
+            sub["nbpra_packagerevision"] = 0;
+            sub["nbpra_businessowner"] = actorRef;
+            sub["ownerid"] = actorRef;
+            sub["nbpra_name"] = title;
+            sub["nbpra_title"] = title;
+            foreach (var k in new[] { "nbpra_businessarea", "nbpra_proposaltype", "nbpra_summary", "nbpra_scope", "nbpra_sponsor" })
+                if (src.Contains(k)) sub[k] = src[k];
+            sub["nbpra_copiedfrom"] = src.ToEntityReference();
+            sub["nbpra_lastbusinessactivityat"] = now;
+            var id = svc.Create(sub);
+            Event(new EntityReference("nbpra_submission", id), C.EventType.Submission, "Draft created from " + src.GetAttributeValue<string>("nbpra_reference"), null, "Onboarding Draft", null, null,
+                "nbpra_submission", id, id.ToString("N") + ":created");
+            return id;
         }
 
         private Guid RecordDecision(Guid requestId, EntityReference signatorySeat, Guid? assignmentId, int outcome, string comment, string subject, string label)

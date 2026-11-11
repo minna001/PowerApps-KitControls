@@ -133,4 +133,31 @@ for (const s of sections) {
     routes++;
   }
 }
+// Evidence questions: a required file per section, limited to the listed formats.
+// Added on their own so environments seeded before these existed pick them up.
+const EVIDENCE = {
+  TAX: ["Upload the tax assessment workbook (Excel).", "xlsx,xls"],
+  FIN: ["Upload the financial model (Excel).", "xlsx,xls"],
+};
+let evidence = 0;
+for (const s of sections) {
+  const spec = EVIDENCE[s.nbpra_code];
+  if (!spec) continue;
+  const code = `${s.nbpra_code}-EV1`;
+  const have = (await api("GET", `nbpra_questiondefs?$select=nbpra_code&$filter=_nbpra_sectiondef_value eq ${s.nbpra_sectiondefid} and nbpra_code eq '${code}'`)).value.length;
+  if (have) continue;
+  await api("POST", "nbpra_questiondefs", {
+    nbpra_name: code,
+    nbpra_code: code,
+    nbpra_label: spec[0],
+    nbpra_answertype: ch("answertype", "File"),
+    nbpra_displayorder: 900,
+    nbpra_isrequired: true,
+    nbpra_requiresevidence: true,
+    nbpra_validationrule: spec[1],
+    "nbpra_sectiondef@odata.bind": `/nbpra_sectiondefs(${s.nbpra_sectiondefid})`,
+  });
+  evidence++;
+}
+console.log(`Added ${evidence} evidence questions.`);
 console.log(`Added ${questions} questions and ${routes} review routes across ${sections.length} sections. You are a member of "${TEAM}".`);

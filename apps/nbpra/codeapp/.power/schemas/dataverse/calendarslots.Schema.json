@@ -274,7 +274,7 @@
             null,
             null
           ],
-          "x-ms-optionsetmetadataid": "eab85093-8ddd-f111-84e8-0022480bb5a1",
+          "x-ms-optionsetmetadataid": "96ba9779-f7dd-f111-84ea-000d3a30c3b4",
           "x-ms-isGlobal": true,
           "x-ms-optionsetdisplayname": "Slotstatus",
           "x-ms-optionSetType": "Picklist"
@@ -336,7 +336,7 @@
             null,
             null
           ],
-          "x-ms-optionsetmetadataid": "35bcac15-5a6d-4208-8b0a-60acff536c75",
+          "x-ms-optionsetmetadataid": "2368609c-f0c8-4c50-8351-5de6fa23db86",
           "x-ms-isGlobal": false,
           "x-ms-optionsetdisplayname": "Status",
           "x-ms-optionSetType": "State"
@@ -368,7 +368,7 @@
             null,
             null
           ],
-          "x-ms-optionsetmetadataid": "e4df646f-f591-4eed-846f-2704b2135225",
+          "x-ms-optionsetmetadataid": "e4b7aeed-e8f3-42a1-8ada-a81c5312cf1a",
           "x-ms-isGlobal": false,
           "x-ms-optionsetdisplayname": "Status Reason",
           "x-ms-optionSetType": "Status"
