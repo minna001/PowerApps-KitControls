@@ -5,6 +5,7 @@
 //
 //   node provision.mjs --url https://<org>.crm.dynamics.com            (device-code sign-in)
 //   node provision.mjs --url https://<org>.crm.dynamics.com --dry-run  (no network; writes plan.json)
+//   node provision.mjs --url https://<org>.crm.dynamics.com --verify   (read-only check against schema.json)
 //
 // Behind a proxy, run with NODE_USE_ENV_PROXY=1 (Node 22.21+).
 // Service principal instead of device code: set DV_TENANT, DV_CLIENT_ID, DV_CLIENT_SECRET.
@@ -181,7 +182,49 @@ function lookupPayload(table, [name, type, required, note]) {
 
 // ---- run --------------------------------------------------------------------
 
+// --verify: read-only check that everything in schema.json exists.
+async function verify() {
+  token = await getToken();
+  const missing = [];
+  let checked = 0;
+  const need = async (what, path) => {
+    checked++;
+    if (!(await exists(path))) missing.push(what);
+  };
+  for (const name of Object.keys(schema.choices)) await need(`choice ${name}`, `GlobalOptionSetDefinitions(Name='${P}_${name}')?$select=MetadataId`);
+  for (const t of schema.tables) {
+    const e = `EntityDefinitions(LogicalName='${ln(t.name)}')`;
+    const attrs = await api("GET", `${e}/Attributes?$select=LogicalName`);
+    const keys = await api("GET", `${e}/Keys?$select=LogicalName`);
+    checked++;
+    if (!attrs) {
+      missing.push(`table ${t.name}`);
+      continue;
+    }
+    const have = new Set(attrs.value.map((a) => a.LogicalName));
+    for (const c of t.columns) {
+      checked++;
+      if (!have.has(`${P}_${c[0]}`)) missing.push(`column ${t.name}.${c[0]}`);
+    }
+    const haveKeys = new Set((keys?.value ?? []).map((k) => k.LogicalName));
+    for (const key of t.keys ?? []) {
+      checked++;
+      if (!haveKeys.has(`${P}_${t.name}_${key.join("_")}`.slice(0, 90))) missing.push(`key ${t.name}(${key.join(",")})`);
+    }
+  }
+  console.log(`Checked ${checked} items; ${missing.length} missing.`);
+  for (const m of missing) console.log(`  missing: ${m}`);
+  const keyState = await api("GET", `EntityKeyMetadata?$select=LogicalName,EntityKeyIndexStatus`).catch(() => null);
+  if (keyState?.value) {
+    const mine = keyState.value.filter((k) => k.LogicalName?.startsWith(`${P}_`));
+    const by = {};
+    for (const k of mine) by[k.EntityKeyIndexStatus] = (by[k.EntityKeyIndexStatus] ?? 0) + 1;
+    console.log("Key index status:", JSON.stringify(by));
+  }
+}
+
 async function main() {
+  if (flag("--verify")) return verify();
   if (!dryRun) token = await getToken();
 
   step("Publisher and solution");
