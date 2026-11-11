@@ -97,10 +97,10 @@ function buildSections(s: Submission): SectionSummary[] {
   const total = SECTION_DEFS.length;
   return SECTION_DEFS.map(([code, title, groups, required], i) => {
     if (code === "PRV" && s.functionalRequired <= 6 && !locked) {
-      return { code, title, status: "Not Applicable", revision: 0, answered: 0, required: 0, groups: [] };
+      return { id: "", code, title, status: "Not Applicable", revision: 0, answered: 0, required: 0, groups: [] };
     }
     if (locked) {
-      return { code, title, status: "Not Started", revision: 0, answered: 0, required, groups: groups.map((name) => ({ name, state: "Not requested" as DecisionState })) };
+      return { id: "", code, title, status: "Not Started", revision: 0, answered: 0, required, groups: groups.map((name) => ({ name, state: "Not requested" as DecisionState })) };
     }
     const doneThrough = Math.round((s.completenessPct / 100) * total);
     const complete = i < doneThrough;
@@ -117,7 +117,7 @@ function buildSections(s: Submission): SectionSummary[] {
     else if (groupStates.every((g) => g.state === "Approved")) status = "Approved";
     else status = "Under Review";
     const answered = complete ? required : i === doneThrough ? Math.floor(required / 2) : 0;
-    return { code, title, status, revision: complete ? 1 : 0, answered, required, groups: groupStates };
+    return { id: "", code, title, status, revision: complete ? 1 : 0, answered, required, groups: groupStates };
   });
 }
 
@@ -267,7 +267,59 @@ function decide(id: string, action: AdminAction, comment: string): ActionResult 
   return { ok: true };
 }
 
+// The journey screens need a real environment; the sample set only feeds the
+// read-only register, workspace and timeline during local development.
+const NOT_IN_SAMPLE = { ok: false as const, error: "Not available with sample data. Open the app in Power Apps to use this." };
+
 export const sampleSource: DataSource = {
+  async context() {
+    return { userId: "", fullName: "Kate (sample administrator)", isAdmin: true };
+  },
+  async listMeetings() {
+    return [];
+  },
+  async listPeople() {
+    return [];
+  },
+  async getIntake() {
+    return { title: "", businessArea: "", proposalType: "", summary: "", scope: "", sponsorId: "", slotId: "", signatories: ["", "", "", "", ""] };
+  },
+  async saveOnboarding() {
+    return NOT_IN_SAMPLE;
+  },
+  async submitOnboarding() {
+    return NOT_IN_SAMPLE;
+  },
+  async getSection() {
+    return undefined;
+  },
+  async saveSection() {
+    return NOT_IN_SAMPLE;
+  },
+  async submitSection() {
+    return NOT_IN_SAMPLE;
+  },
+  async listReviewTasks() {
+    return [];
+  },
+  async getReview() {
+    return undefined;
+  },
+  async decideReview() {
+    return NOT_IN_SAMPLE;
+  },
+  async requestSignatories() {
+    return NOT_IN_SAMPLE;
+  },
+  async listSignatoryTasks() {
+    return [];
+  },
+  async decideSignatory() {
+    return NOT_IN_SAMPLE;
+  },
+  async finalSubmit() {
+    return NOT_IN_SAMPLE;
+  },
   async listEvents(submissionId) {
     return events.filter((e) => !submissionId || e.submissionId === submissionId).sort(newestFirst);
   },
@@ -283,6 +335,7 @@ export const sampleSource: DataSource = {
     if (!s) return undefined;
     const detail: SubmissionDetail = {
       ...s,
+      ownerId: "",
       sections: buildSections(s),
       signatories: buildSignatories(s),
       blockers: s.blocker ? [s.blocker] : [],

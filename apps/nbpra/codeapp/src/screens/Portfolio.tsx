@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Input, Select } from "@fluentui/react-components";
 import { SearchRegular } from "@fluentui/react-icons";
 import type { DataSource } from "../data/source";
-import type { Submission, SubmissionStatus } from "../data/types";
+import type { Submission, SubmissionStatus, UserContext } from "../data/types";
 import { Meter, StatusPill, formatDate } from "../components/bits";
 
 const CLOSED: SubmissionStatus[] = ["Withdrawn"];
@@ -11,7 +11,7 @@ type Attention = "all" | "blocked" | "kate" | "signatories" | "functional" | "ag
 
 const ATTENTION: { key: Attention; label: string; test: (s: Submission) => boolean }[] = [
   { key: "blocked", label: "Blocked", test: (s) => !!s.blocker },
-  { key: "kate", label: "Waiting on Kate", test: (s) => s.nextActor === "Kate" },
+  { key: "kate", label: "Waiting on the administrator", test: (s) => s.nextActor === "Kate" },
   { key: "functional", label: "Functional approvals outstanding", test: (s) => s.nextActor === "Functional approvers" },
   { key: "signatories", label: "Signatory approvals outstanding", test: (s) => s.status === "Awaiting Signatory Approval" },
   { key: "aged", label: "Open longer than 90 days", test: (s) => s.ageDays > 90 && s.status !== "Authorized for Committee" && !CLOSED.includes(s.status) },
@@ -19,7 +19,14 @@ const ATTENTION: { key: Attention; label: string; test: (s: Submission) => boole
 
 type Sort = "attention" | "age" | "meeting" | "title";
 
-export function Portfolio({ source, initialAttention = "all" }: { source: DataSource; initialAttention?: Attention }) {
+const HEAD = {
+  all: ["Register", "All submissions"],
+  queue: ["Admin queue", "Awaiting the administrator's decision"],
+  mine: ["My work", "My submissions"],
+} as const;
+
+export function Portfolio({ source, user, mode }: { source: DataSource; user: UserContext; mode: "all" | "queue" | "mine" }) {
+  const initialAttention: Attention = mode === "queue" ? "kate" : "all";
   const [all, setAll] = useState<Submission[]>([]);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<"" | SubmissionStatus>("");
@@ -28,8 +35,8 @@ export function Portfolio({ source, initialAttention = "all" }: { source: DataSo
   const [sort, setSort] = useState<Sort>("attention");
 
   useEffect(() => {
-    source.listSubmissions().then(setAll);
-  }, [source]);
+    source.listSubmissions().then((rows) => setAll(mode === "mine" ? rows.filter((r) => r.owner === user.fullName) : rows));
+  }, [source, mode, user.fullName]);
 
   const active = useMemo(() => all.filter((s) => !CLOSED.includes(s.status)), [all]);
 
@@ -57,8 +64,17 @@ export function Portfolio({ source, initialAttention = "all" }: { source: DataSo
 
   return (
     <>
-      <div className="eyebrow">{initialAttention === "kate" ? "Admin queue" : "Register"}</div>
-      <h1 className="page-title">{initialAttention === "kate" ? "Awaiting Kate's decision" : "All submissions"}</h1>
+      <div className="page-head">
+        <div>
+          <div className="eyebrow">{HEAD[mode][0]}</div>
+          <h1 className="page-title">{HEAD[mode][1]}</h1>
+        </div>
+        {mode === "mine" && (
+          <a className="btn primary" href="#/calendar">
+            Start a new submission
+          </a>
+        )}
+      </div>
 
       <div className="portfolio">
         <section>

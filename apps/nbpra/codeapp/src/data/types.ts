@@ -46,6 +46,8 @@ export interface Submission {
 }
 
 export interface SectionSummary {
+  /** Section instance id; empty for sample rows. */
+  id: string;
   code: string;
   title: string;
   status: SectionStatus;
@@ -62,6 +64,7 @@ export interface Signatory {
 }
 
 export interface SubmissionDetail extends Submission {
+  ownerId: string;
   sections: SectionSummary[];
   signatories: Signatory[];
   blockers: string[];
@@ -121,3 +124,100 @@ export interface BusinessEvent {
 export type AdminAction = "approveOnboarding" | "denyOnboarding" | "authorize" | "returnFinal" | "rejectFinal";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
+
+// ---- submission journey -------------------------------------------------------
+
+export interface UserContext {
+  userId: string;
+  fullName: string;
+  isAdmin: boolean;
+}
+
+export interface Person {
+  id: string;
+  name: string;
+}
+
+export interface SlotInfo {
+  id: string;
+  reference: string;
+  startAt: string;
+  endAt: string;
+  capacity: number;
+  allocated: number;
+  /** Open slots in an open meeting inside its request window, with capacity left. */
+  requestable: boolean;
+  status: string;
+}
+
+export interface MeetingInfo {
+  id: string;
+  name: string;
+  committee: string;
+  startAt: string;
+  endAt: string;
+  status: string;
+  requestCloseAt?: string;
+  slots: SlotInfo[];
+}
+
+export interface Intake {
+  title: string;
+  businessArea: string;
+  proposalType: string;
+  summary: string;
+  scope: string;
+  sponsorId: string;
+  slotId: string;
+  /** Exactly five entries; an empty string is an unfilled seat. */
+  signatories: string[];
+}
+
+export type AnswerType = "Text" | "Long text" | "Boolean" | "Choice" | "Number" | "Date";
+
+export interface Question {
+  id: string;
+  code: string;
+  label: string;
+  type: AnswerType;
+  required: boolean;
+  options: { code: string; label: string }[];
+  /** Stored answer as text: "true"/"false", a number, an ISO date, an option code or free text. */
+  value: string;
+}
+
+export interface SectionDetail {
+  id: string;
+  title: string;
+  status: SectionStatus;
+  revision: number;
+  editable: boolean;
+  questions: Question[];
+  /** Reviewer's reason when the previous revision was returned. */
+  returnedReason?: string;
+}
+
+export interface ReviewTask {
+  requestId: string;
+  submissionId: string;
+  reference: string;
+  title: string;
+  section: string;
+  team: string;
+  requestedAt: string;
+}
+
+export interface ReviewDetail extends ReviewTask {
+  answers: { label: string; value: string }[];
+}
+
+export interface SignatoryTask {
+  assignmentId: string;
+  submissionId: string;
+  reference: string;
+  title: string;
+  seat: string;
+  packageRevision: number;
+}
+
+export type OpResult<T = void> = { ok: true; message: string; data: T } | { ok: false; error: string };

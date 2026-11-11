@@ -2,12 +2,15 @@ import { useEffect, useState } from "react";
 import { Tab, TabList } from "@fluentui/react-components";
 import { ErrorCircleRegular } from "@fluentui/react-icons";
 import type { DataSource } from "../data/source";
-import { PHASES, phaseIndex, type BusinessEvent, type SubmissionDetail } from "../data/types";
+import { PHASES, phaseIndex, type BusinessEvent, type OpResult, type SubmissionDetail, type UserContext } from "../data/types";
+import { Checklist } from "../components/Checklist";
+import { Notice } from "../components/ui";
+import { Button } from "@fluentui/react-components";
 import { AdminDecision } from "../components/AdminDecision";
 import { TimelineTable } from "../components/Timeline";
 import { DecisionPill, Meter, Pill, SectionPill, StatusPill, formatDate } from "../components/bits";
 
-const TABS = ["Overview", "Checklist", "Evidence", "Functional reviews", "Signatories", "Communications", "Timeline"];
+const TABS = ["Overview", "Checklist", "Timeline"];
 
 function currentPhase(s: SubmissionDetail): number {
   const p = phaseIndex(s.status);
@@ -15,9 +18,11 @@ function currentPhase(s: SubmissionDetail): number {
   return p;
 }
 
-export function Workspace({ source, id }: { source: DataSource; id: string }) {
+export function Workspace({ source, user, id, initialTab }: { source: DataSource; user: UserContext; id: string; initialTab?: string }) {
   const [s, setS] = useState<SubmissionDetail | null | undefined>(null);
-  const [tab, setTab] = useState("Overview");
+  const [tab, setTab] = useState(initialTab && TABS.includes(initialTab) ? initialTab : "Overview");
+  const [result, setResult] = useState<OpResult<unknown>>();
+  const [busy, setBusy] = useState(false);
 
   const [events, setEvents] = useState<BusinessEvent[]>([]);
 
@@ -40,9 +45,28 @@ export function Workspace({ source, id }: { source: DataSource; id: string }) {
     );
 
   const phase = currentPhase(s);
+  const isOwner = s.ownerId === user.userId || source.isSample;
+  const allApproved = s.sections.length > 0 && s.sections.every((x) => x.status === "Approved" || x.status === "Not Applicable");
+  const checklistOpen = s.status === "Checklist in Progress" || s.status === "Final Changes Requested";
+
+  async function run(op: () => Promise<OpResult>) {
+    setBusy(true);
+    const r = await op();
+    setResult(r);
+    setBusy(false);
+    if (r.ok) load();
+  }
+
+  // What the business owner can do next, if anything.
+  let ownerAction: { label: string; hint: string; go: () => void } | undefined;
+  if (isOwner) {
+    if (s.status === "Onboarding Draft" || s.status === "Onboarding Denied")
+      ownerAction = { label: s.status === "Onboarding Denied" ? "Revise onboarding" : "Continue onboarding", hint: "Complete the intake details and submit the request.", go: () => (window.location.hash = `#/onboarding/${s.id}`) };
+    else if (checklistOpen && allApproved) ownerAction = { label: "Request signatory approval", hint: "Every section is approved. Send the complete package to the five signatories.", go: () => run(() => source.requestSignatories(s.id)) };
+    else if (checklistOpen) ownerAction = { label: "Open the checklist", hint: "Answer each section and submit it for functional review.", go: () => setTab("Checklist") };
+    else if (s.status === "Ready for Final Submission") ownerAction = { label: "Make final submission", hint: "All five signatories approved. Send the package to the NBPRA administrator.", go: () => run(() => source.finalSubmit(s.id)) };
+  }
   const applicable = s.sections.filter((x) => x.status !== "Not Applicable");
-  const answered = applicable.reduce((n, x) => n + x.answered, 0);
-  const required = applicable.reduce((n, x) => n + x.required, 0);
   const approvedSections = applicable.filter((x) => x.status === "Approved").length;
 
   return (
@@ -64,6 +88,7 @@ export function Workspace({ source, id }: { source: DataSource; id: string }) {
         </div>
       </div>
 
+      <Notice result={result} />
       <ol className="rail" aria-label="Progress">
         {PHASES.map((p, i) => {
           const state = phase < 0 ? "todo" : i < phase ? "done" : i === phase ? "now" : "todo";
@@ -97,7 +122,6 @@ export function Workspace({ source, id }: { source: DataSource; id: string }) {
               </div>
 
               <div className="stats">
-                <Stat big={required ? `${answered} / ${required}` : "—"} label="Required answers saved" />
                 <Stat big={`${approvedSections} / ${applicable.length}`} label="Sections approved" />
                 <Stat big={`${s.functionalApproved} / ${s.functionalRequired}`} label="Functional group approvals" />
                 <Stat big={`${s.signatoriesApproved} / 5`} label="Signatory approvals" />
@@ -122,7 +146,6 @@ export function Workspace({ source, id }: { source: DataSource; id: string }) {
                   <thead>
                     <tr>
                       <th scope="col">Section</th>
-                      <th scope="col">Answers</th>
                       <th scope="col">Status</th>
                       <th scope="col">Required groups</th>
                     </tr>
@@ -131,10 +154,15 @@ export function Workspace({ source, id }: { source: DataSource; id: string }) {
                     {s.sections.map((x) => (
                       <tr key={x.code}>
                         <td>
-                          {x.title}
+                          {x.id ? (
+                            <button className="link plain" onClick={() => setTab("Checklist")}>
+                              {x.title}
+                            </button>
+                          ) : (
+                            x.title
+                          )}
                           {x.revision > 0 && <span className="row-sub"> · rev {x.revision}</span>}
                         </td>
-                        <td className="nowrap">{x.status === "Not Applicable" || x.required === 0 ? "—" : `${x.answered} / ${x.required}`}</td>
                         <td>
                           <SectionPill status={x.status} />
                         </td>
@@ -153,24 +181,37 @@ export function Workspace({ source, id }: { source: DataSource; id: string }) {
                 </table>
               </div>
             </div>
+          ) : tab === "Checklist" ? (
+            <div className="tab-body">
+              <Checklist source={source} sections={s.sections} canEdit={isOwner && checklistOpen} onChanged={load} />
+            </div>
           ) : tab === "Timeline" ? (
             <div className="tab-body">
               <TimelineTable events={events} />
             </div>
-          ) : (
-            <div className="tab-body">
-              <p className="muted">The {tab} tab is not built yet.</p>
-            </div>
-          )}
+          ) : null}
         </section>
 
         <aside className="ws-side">
-          <AdminDecision source={source} submission={s} onDone={load} />
+          {user.isAdmin && <AdminDecision source={source} submission={s} onDone={load} />}
           <div className="panel">
             <div className="panel-head">Next action</div>
             <div className="panel-body">
               <div className="next-title">{s.nextAction}</div>
-              <div className="muted">Waiting on: {s.nextActor}</div>
+              <div className="muted">Waiting on: {s.nextActor === "Kate" ? "NBPRA administrator" : s.nextActor}</div>
+              {ownerAction && (
+                <>
+                  <p className="muted decision-hint">{ownerAction.hint}</p>
+                  <Button appearance="primary" disabled={busy} onClick={ownerAction.go}>
+                    {ownerAction.label}
+                  </Button>
+                </>
+              )}
+              {s.status === "Awaiting Signatory Approval" && (
+                <p className="muted decision-hint">
+                  Signatories approve from <a href="#/approvals">My approvals</a>.
+                </p>
+              )}
             </div>
           </div>
 

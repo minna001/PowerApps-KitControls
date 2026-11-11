@@ -6,24 +6,44 @@
 // Models
 export * as CommonModels from './models/CommonModels';
 export * as Nbpra_AdminDecisionModel from './models/Nbpra_AdminDecisionModel';
+export * as Nbpra_WorkflowModel from './models/Nbpra_WorkflowModel';
+export * as Nbpra_answersModel from './models/Nbpra_answersModel';
+export * as Nbpra_approvalassignmentsModel from './models/Nbpra_approvalassignmentsModel';
+export * as Nbpra_approvaldecisionsModel from './models/Nbpra_approvaldecisionsModel';
+export * as Nbpra_approvalrequestsModel from './models/Nbpra_approvalrequestsModel';
 export * as Nbpra_businesseventsModel from './models/Nbpra_businesseventsModel';
+export * as Nbpra_committeesModel from './models/Nbpra_committeesModel';
 export * as Nbpra_meetingsModel from './models/Nbpra_meetingsModel';
+export * as Nbpra_questiondefsModel from './models/Nbpra_questiondefsModel';
+export * as Nbpra_questionoptionsModel from './models/Nbpra_questionoptionsModel';
 export * as Nbpra_sectiondefsModel from './models/Nbpra_sectiondefsModel';
 export * as Nbpra_sectioninstancesModel from './models/Nbpra_sectioninstancesModel';
+export * as Nbpra_sectionrevisionsModel from './models/Nbpra_sectionrevisionsModel';
 export * as Nbpra_signatoriesModel from './models/Nbpra_signatoriesModel';
 export * as Nbpra_slotrequestsModel from './models/Nbpra_slotrequestsModel';
 export * as Nbpra_slotsModel from './models/Nbpra_slotsModel';
 export * as Nbpra_submissionsModel from './models/Nbpra_submissionsModel';
 export * as SystemusersModel from './models/SystemusersModel';
+export * as TeamsModel from './models/TeamsModel';
 
 // Services
 export * from './services/Nbpra_AdminDecisionService';
+export * from './services/Nbpra_WorkflowService';
+export * from './services/Nbpra_answersService';
+export * from './services/Nbpra_approvalassignmentsService';
+export * from './services/Nbpra_approvaldecisionsService';
+export * from './services/Nbpra_approvalrequestsService';
 export * from './services/Nbpra_businesseventsService';
+export * from './services/Nbpra_committeesService';
 export * from './services/Nbpra_meetingsService';
+export * from './services/Nbpra_questiondefsService';
+export * from './services/Nbpra_questionoptionsService';
 export * from './services/Nbpra_sectiondefsService';
 export * from './services/Nbpra_sectioninstancesService';
+export * from './services/Nbpra_sectionrevisionsService';
 export * from './services/Nbpra_signatoriesService';
 export * from './services/Nbpra_slotrequestsService';
 export * from './services/Nbpra_slotsService';
 export * from './services/Nbpra_submissionsService';
 export * from './services/SystemusersService';
+export * from './services/TeamsService';

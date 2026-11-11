@@ -169,3 +169,57 @@ a.nav-item:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px;
 .decision-hint { margin: 0 0 10px; font-size: 13px; }
 .decision-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
 .reason { color: var(--bad); font-size: 13px; margin-top: 2px; }
+
+/* Journey screens */
+.page-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.btn.primary { background: var(--teal); border-color: var(--teal); color: #fff; text-decoration: none; padding: 8px 14px; font-weight: 600; margin-top: 10px; white-space: nowrap; }
+.btn.primary:hover { background: #174c49; }
+.lead { max-width: 760px; margin: -6px 0 18px; color: var(--muted); }
+.link.plain { margin-left: 0; text-align: left; }
+.notice { border: 1px solid var(--line); padding: 10px 14px; margin: 0 0 14px; background: var(--card); }
+.notice.good { background: var(--good-bg); border-color: #b9d6c3; color: var(--good); }
+.notice.bad { background: var(--bad-bg); border-color: #e3bdb4; color: var(--bad); }
+.notice.info { background: var(--info-bg); border-color: #bccfe3; color: var(--info); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 6px; }
+.tile { border: 1px solid var(--line); background: var(--card); padding: 16px 18px; text-decoration: none; display: block; }
+.tile:hover { border-color: var(--teal); }
+.tile-num { font-size: 28px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.tile-label { color: var(--muted); font-size: 13px; }
+.empty-card { border: 1px dashed var(--line); background: var(--card); padding: 22px; max-width: 760px; }
+.empty-card p { margin: 0 0 10px; }
+.stack { display: grid; gap: 10px; }
+.actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
+.actions.tight { margin-top: 0; }
+.fields { display: grid; gap: 14px; }
+.fields .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 16px; align-items: start; max-width: 1180px; }
+.form-grid > .panel:first-child { grid-column: 1 / -1; }
+.meeting { border: 1px solid var(--line); background: var(--card); padding: 16px 18px; margin-bottom: 14px; }
+.meeting-head { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 12px; }
+.slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.slot { display: flex; flex-direction: column; gap: 2px; padding: 9px 11px; border: 1px solid var(--line); text-decoration: none; }
+.slot-time { font-weight: 600; font-variant-numeric: tabular-nums; }
+.slot-state { font-size: 12px; }
+.slot.open { border-color: var(--teal); background: #eef5f4; }
+.slot.open .slot-state { color: var(--teal); font-weight: 600; }
+.slot.open:hover, .slot.open:focus-visible { background: var(--teal); color: #fff; outline: none; }
+.slot.open:hover .slot-state, .slot.open:focus-visible .slot-state { color: #fff; }
+.slot.taken { color: var(--muted); background: #f1eee6; }
+.task-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 12px 14px; }
+.review { border-top: 1px solid var(--line); }
+.answers { margin: 0 0 16px; display: grid; gap: 12px; }
+.answers dt { font-weight: 600; }
+.answers dd { margin: 2px 0 0; white-space: pre-wrap; }
+.checklist { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 22px; align-items: start; }
+.cl-nav { display: grid; gap: 2px; }
+.cl-nav .eyebrow { margin-bottom: 6px; }
+.cl-item { display: flex; justify-content: space-between; align-items: center; gap: 8px; text-align: left; padding: 9px 10px; border: 0; background: none; font: inherit; color: inherit; cursor: pointer; border-left: 3px solid transparent; }
+.cl-item:hover { background: #f1eee6; }
+.cl-item.on { background: #e4eeec; border-left-color: var(--teal); font-weight: 600; }
+.cl-item:focus-visible { outline: 2px solid var(--teal); outline-offset: -2px; }
+.cl-body { max-width: 760px; min-width: 0; }
+.cl-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+@media (max-width: 900px) {
+  .form-grid, .checklist, .fields .two { grid-template-columns: minmax(0, 1fr); }
+  .page-head, .task-row, .meeting-head { flex-direction: column; align-items: stretch; }
+}

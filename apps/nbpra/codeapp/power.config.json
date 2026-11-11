@@ -63,6 +63,51 @@
           "entitySetName": "systemusers",
           "logicalName": "systemuser",
           "isHidden": false
+        },
+        "committees": {
+          "entitySetName": "nbpra_committees",
+          "logicalName": "nbpra_committee",
+          "isHidden": false
+        },
+        "questiondefinitions": {
+          "entitySetName": "nbpra_questiondefs",
+          "logicalName": "nbpra_questiondef",
+          "isHidden": false
+        },
+        "questionoptions": {
+          "entitySetName": "nbpra_questionoptions",
+          "logicalName": "nbpra_questionoption",
+          "isHidden": false
+        },
+        "answers": {
+          "entitySetName": "nbpra_answers",
+          "logicalName": "nbpra_answer",
+          "isHidden": false
+        },
+        "sectionrevisions": {
+          "entitySetName": "nbpra_sectionrevisions",
+          "logicalName": "nbpra_sectionrevision",
+          "isHidden": false
+        },
+        "approvalrequests": {
+          "entitySetName": "nbpra_approvalrequests",
+          "logicalName": "nbpra_approvalrequest",
+          "isHidden": false
+        },
+        "approvalassignments": {
+          "entitySetName": "nbpra_approvalassignments",
+          "logicalName": "nbpra_approvalassignment",
+          "isHidden": false
+        },
+        "approvaldecisions": {
+          "entitySetName": "nbpra_approvaldecisions",
+          "logicalName": "nbpra_approvaldecision",
+          "isHidden": false
+        },
+        "teams": {
+          "entitySetName": "teams",
+          "logicalName": "team",
+          "isHidden": false
         }
       },
       "environmentVariableName": ""
