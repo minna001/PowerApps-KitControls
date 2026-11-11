@@ -11,16 +11,13 @@ If `pac` is missing, run that script before anything else.
 
 ## Layout
 
-- `src/` — six legacy PCF controls from the original KitControls project (2019,
-  `pcf-scripts` 0.3.x). They do not build on current Node. Do not touch them
-  unless asked; migrating one means re-scaffolding with `pac pcf init` and
-  porting the control's `index.ts` and manifest.
-- `apps/` — new work goes here, one folder per app or component:
-  - `apps/<name>/control/` PCF control
-  - `apps/<name>/plugin/` Dataverse plug-in (C#)
-  - `apps/<name>/solution/` solution project that packages the above
-  - `apps/<name>/canvas/` unpacked canvas app source
-  - `apps/<name>/codeapp/` code app (React + Vite)
+All work goes under `apps/`, one folder per app or component:
+
+- `apps/<name>/control/` PCF control
+- `apps/<name>/plugin/` Dataverse plug-in (C#)
+- `apps/<name>/solution/` solution project that packages the above
+- `apps/<name>/canvas/` unpacked canvas app source
+- `apps/<name>/codeapp/` code app (React + Vite)
 
 ## Works offline (verified in this container)
 

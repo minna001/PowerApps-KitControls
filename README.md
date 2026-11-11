@@ -1,24 +1,15 @@
-# Power Apps CDS KitControls
+# Power Apps workspace
 
-This is a project with custom components for D365 CE and Model Driven Apps.  I hope progressively update with new controls. 
+Source for custom Power Apps: model-driven apps, canvas apps, code apps, and the
+Dataverse solutions, PCF controls, plug-ins and flows behind them. Everything is
+built from the command line with the Power Platform CLI (`pac`).
 
+## Getting started
 
-# Custom Controls
+```bash
+sudo scripts/setup-toolchain.sh    # .NET SDK 8 + 10 and the pac CLI (Ubuntu)
+pac auth create --deviceCode --environment https://<org>.crm.dynamics.com
+```
 
-Here are the custom controls currently included in the project.
-
-Pic |  Control |  Type | Description | Managed Solution
------------------------ | ----------- | -------| ----------- | -----------
-![](assets/pictures/rich-text-control.jpg) | [Rich Text Control](src/RichTextControl) | Field | A control that let you to write rich text for multiline fields | [RichTextControl](src/RichTextControl/solution/RichTextControl.zip)
-![](assets/pictures/credit-card-control.jpg) | [Credit Card Control](src/CreditCardControl) | Field | A interactive control for credit card | [CreditCardControl](src/CreditCardControl/solution/CreditCardControl.zip)
-![](assets/pictures/exchange-rate-preview.jpg) | [Exchange Rate Control](src/ExchangeRateControl) | Field | A control for get the exchange rates from the api https://exchangeratesapi.io/ | [ExchangeRateControl](src/ExchangeRateControl/solution/ExchangeRateControl.zip)
-![](assets/pictures/shortcutbuttons.png) | [ShortcutButtons](src/ShortcutButtons) | Field | It allows to create shortcut buttons for open quick forms or main forms of other entities  | [ShortcutButtons](src/ShortcutButtons/solution/ShortcutButtonsSolution.zip)
-![](assets/pictures/item-comparator-preview.png) | [ItemsComparator ](src/DSItemsComparator) | DataSet | Allows comparing selected records through a radar, line or bar chart. | [ItemsComparator](src/DSItemsComparator/solution/DSItemsComparator.zip)
-![](assets/pictures/sharepointcard.jpg) | [SharePointDocumentCard](src/DS_SharePointDataCard) | DataSet | It allows you to show a preview of the documents in the form of a card | [SharePointDocumentCard](src/DS_SharePointDataCard/solution/DS_SharePointDataCardSolution.zip)
-
-
-
-For more info you can to go my page: [https://jaguil3ra.com](https://jaguil3ra.com)
-
-
-
+New work lives under `apps/<name>/`. See [CLAUDE.md](CLAUDE.md) for the folder
+layout and the build, packaging and deployment commands.
