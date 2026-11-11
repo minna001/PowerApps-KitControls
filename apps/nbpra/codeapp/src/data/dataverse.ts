@@ -1,4 +1,5 @@
 import type { DataSource } from "./source";
+import { DONE_SECTION, NEXT, SIGNED_OFF } from "./derive";
 import type {
   ActionResult,
   AdminAction,
@@ -28,23 +29,6 @@ export interface DataverseOptions {
 
 const FV = "@OData.Community.Display.V1.FormattedValue";
 type Row = Record<string, any>;
-
-const NEXT: Record<SubmissionStatus, [action: string, actor: string]> = {
-  "Onboarding Draft": ["Complete and submit onboarding", "Submitter"],
-  "Awaiting Onboarding Review": ["Kate to review onboarding request", "Kate"],
-  "Onboarding Denied": ["Revise and resubmit onboarding", "Submitter"],
-  "Checklist in Progress": ["Complete checklist sections and obtain functional approvals", "Submitter"],
-  "Awaiting Signatory Approval": ["Signatories to approve the package", "Signatories"],
-  "Ready for Final Submission": ["Make final submission", "Submitter"],
-  "Awaiting Final Admin Review": ["Kate to review final package", "Kate"],
-  "Final Changes Requested": ["Revise and resubmit", "Submitter"],
-  "Final Rejected": ["Closed pending reopen", "Submitter"],
-  "Authorized for Committee": ["Attend committee", "None"],
-  Withdrawn: ["Closed", "None"],
-};
-
-const SIGNED_OFF: SubmissionStatus[] = ["Ready for Final Submission", "Awaiting Final Admin Review", "Authorized for Committee"];
-const DONE_SECTION: SectionStatus[] = ["Ready to Submit", "Under Review", "Approved"];
 
 export function createDataverseSource(opts: DataverseOptions = {}): DataSource & { whoAmI(): Promise<string> } {
   const base = (opts.baseUrl ?? "") + "/api/data/v9.2/";

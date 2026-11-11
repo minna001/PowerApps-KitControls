@@ -1,0 +1,71 @@
+{
+  "version": "1.0",
+  "appId": null,
+  "appDisplayName": "NBPRA",
+  "region": "prod",
+  "appType": "CodeApp",
+  "environmentId": "Default-7c8c2123-f735-4c37-8093-1e193d73c994",
+  "description": "NBPRA submission and approval workspace",
+  "buildPath": "./dist",
+  "buildEntryPoint": "index.html",
+  "localAppUrl": "http://localhost:3000",
+  "logoPath": "Default",
+  "connectionReferences": {},
+  "databaseReferences": {
+    "default.cds": {
+      "dataSources": {
+        "environment_39a902ba": {
+          "entitySetName": "Environment",
+          "logicalName": "environment_39a902ba",
+          "isHidden": false
+        },
+        "submissions": {
+          "entitySetName": "nbpra_submissions",
+          "logicalName": "nbpra_submission",
+          "isHidden": false
+        },
+        "sectioninstances": {
+          "entitySetName": "nbpra_sectioninstances",
+          "logicalName": "nbpra_sectioninstance",
+          "isHidden": false
+        },
+        "signatoryassignments": {
+          "entitySetName": "nbpra_signatories",
+          "logicalName": "nbpra_signatory",
+          "isHidden": false
+        },
+        "businessevents": {
+          "entitySetName": "nbpra_businessevents",
+          "logicalName": "nbpra_businessevent",
+          "isHidden": false
+        },
+        "calendarslots": {
+          "entitySetName": "nbpra_slots",
+          "logicalName": "nbpra_slot",
+          "isHidden": false
+        },
+        "slotrequests": {
+          "entitySetName": "nbpra_slotrequests",
+          "logicalName": "nbpra_slotrequest",
+          "isHidden": false
+        },
+        "committeemeetings": {
+          "entitySetName": "nbpra_meetings",
+          "logicalName": "nbpra_meeting",
+          "isHidden": false
+        },
+        "sectiondefinitions": {
+          "entitySetName": "nbpra_sectiondefs",
+          "logicalName": "nbpra_sectiondef",
+          "isHidden": false
+        },
+        "users": {
+          "entitySetName": "systemusers",
+          "logicalName": "systemuser",
+          "isHidden": false
+        }
+      },
+      "environmentVariableName": ""
+    }
+  }
+}

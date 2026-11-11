@@ -1,0 +1,67 @@
+{
+  "name": "nbpra_AdminDecision",
+  "title": "nbpra_AdminDecision",
+  "type": "Microsoft.PowerApps/dataverseOperation",
+  "properties": {
+    "displayName": "nbpra_AdminDecision",
+    "swagger": {
+      "swagger": "2.0",
+      "info": {
+        "title": "nbpra_AdminDecision",
+        "version": "1.0"
+      },
+      "basePath": "/api/data/v9.2",
+      "paths": {
+        "/nbpra_AdminDecision": {
+          "post": {
+            "operationId": "nbpra_AdminDecision",
+            "parameters": [
+              {
+                "name": "SubmissionId",
+                "in": "body",
+                "required": true,
+                "type": "string",
+                "x-ms-dataverse-type": "StringType",
+                "x-ms-csdl-type": "Edm.String"
+              },
+              {
+                "name": "Action",
+                "in": "body",
+                "required": true,
+                "type": "string",
+                "x-ms-dataverse-type": "StringType",
+                "x-ms-csdl-type": "Edm.String"
+              },
+              {
+                "name": "Comment",
+                "in": "body",
+                "required": false,
+                "type": "string",
+                "x-ms-dataverse-type": "StringType",
+                "x-ms-csdl-type": "Edm.String"
+              },
+              {
+                "name": "Channel",
+                "in": "body",
+                "required": false,
+                "type": "string",
+                "x-ms-dataverse-type": "StringType",
+                "x-ms-csdl-type": "Edm.String"
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Success",
+                "schema": {
+                  "type": "object",
+                  "x-ms-dataverse-type": "LookupType",
+                  "x-ms-csdl-type": "mscrm.nbpra_AdminDecisionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

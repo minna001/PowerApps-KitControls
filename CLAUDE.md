@@ -77,3 +77,27 @@ org's own `<org>.crm.dynamics.com` and `<org>.api.crm.dynamics.com`.
 - Importing or publishing to an environment changes a live tenant. Confirm the
   target with `pac env who` and ask before importing into anything that is not a
   dev environment.
+
+## NBPRA (apps/nbpra)
+
+Committee-stage approval app. Target environment so far: `https://org158f71e0.crm.dynamics.com`
+(a tenant Default environment, used as the owner's personal dev space).
+
+- `dataverse/schema.json` is the data-model contract. Scripts in `dataverse/` apply it
+  and everything built on it; all are re-runnable and take `--url <org url>`:
+  `provision.mjs` (tables; `--verify` is read-only), `mda.mjs` (model-driven app, views,
+  site map), `forms.mjs`, `seed.mjs` (sample data, runs once), `register.mjs` (plug-in and
+  custom API; build `plugin/` first), `commands.mjs` (command-bar buttons), `webapp.mjs`
+  (React app as a web resource; run `npm run build:webresource` in `codeapp/` first).
+- Run the scripts with `NODE_USE_ENV_PROXY=1` in cloud sessions, or Node's fetch bypasses
+  the proxy. Set `DV_TOKEN_FILE` to a path outside the repo to reuse one device-code
+  sign-in for an hour.
+- `plugin/` holds the server-side operations (custom API `nbpra_AdminDecision`). Choice
+  values are 774100000 plus the option's index in `schema.json`.
+- `codeapp/` is the React front end. Default `npm run build` is the code-app build
+  (Power Apps SDK services in `src/generated`, created by the `pa` CLI); `--mode
+  webresource` is a single-file build that calls the Dataverse Web API directly; `npm run
+  dev` uses sample data.
+- Code-app CLI (`npx pa ...` in `codeapp/`) needs a keyring in headless Linux: install
+  `gnome-keyring dbus-x11`, start `dbus-launch`, unlock `gnome-keyring-daemon`, then
+  `pa auth login --device-code`. Publish with `pa app push --solution-id <NBPRA solution id>`.
