@@ -97,7 +97,9 @@ function siteMapXml() {
       items.map(([t, label]) => `<SubArea Id="${P}_sub_${t}" Entity="${P}_${t}">${title(label)}</SubArea>`).join("") +
       `</Group>`,
   ).join("");
-  return `<SiteMap IntroducedVersion="7.0.0.0"><Area Id="${P}_area" ShowGroups="true">${title("NBPRA")}${groups}</Area></SiteMap>`;
+  // The React workspace, stored as a web resource by webapp.mjs.
+  const workspace = `<Group Id="${P}_group_workspace" IsProfile="false">${title("Workspace")}<SubArea Id="${P}_sub_workspace" Url="$webresource:${P}_/app.html">${title("Portfolio studio")}</SubArea></Group>`;
+  return `<SiteMap IntroducedVersion="7.0.0.0"><Area Id="${P}_area" ShowGroups="true">${title("NBPRA")}${workspace}${groups}</Area></SiteMap>`;
 }
 
 // ---- run --------------------------------------------------------------------

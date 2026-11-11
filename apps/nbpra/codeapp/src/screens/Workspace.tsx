@@ -97,7 +97,7 @@ export function Workspace({ source, id }: { source: DataSource; id: string }) {
               </div>
 
               <div className="stats">
-                <Stat big={`${answered} / ${required}`} label="Required answers saved" />
+                <Stat big={required ? `${answered} / ${required}` : "—"} label="Required answers saved" />
                 <Stat big={`${approvedSections} / ${applicable.length}`} label="Sections approved" />
                 <Stat big={`${s.functionalApproved} / ${s.functionalRequired}`} label="Functional group approvals" />
                 <Stat big={`${s.signatoriesApproved} / 5`} label="Signatory approvals" />
@@ -134,13 +134,13 @@ export function Workspace({ source, id }: { source: DataSource; id: string }) {
                           {x.title}
                           {x.revision > 0 && <span className="row-sub"> · rev {x.revision}</span>}
                         </td>
-                        <td className="nowrap">{x.status === "Not Applicable" ? "—" : `${x.answered} / ${x.required}`}</td>
+                        <td className="nowrap">{x.status === "Not Applicable" || x.required === 0 ? "—" : `${x.answered} / ${x.required}`}</td>
                         <td>
                           <SectionPill status={x.status} />
                         </td>
                         <td>
                           {x.groups.length === 0
-                            ? "None"
+                            ? "—"
                             : x.groups.map((g) => (
                                 <span key={g.name} className="group">
                                   {g.name} <DecisionPill state={g.state} />

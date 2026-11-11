@@ -37,7 +37,7 @@ const NAV: { heading: string; items: NavItem[] }[] = [
   { heading: "Records", items: [{ label: "Notifications", icon: <MailRegular /> }] },
 ];
 
-export function Shell({ route, isSample, children }: { route: string; isSample: boolean; children: ReactNode }) {
+export function Shell({ route, isSample, userName, children }: { route: string; isSample: boolean; userName: string; children: ReactNode }) {
   return (
     <div className="shell">
       <aside className="nav" aria-label="Primary">
@@ -72,7 +72,7 @@ export function Shell({ route, isSample, children }: { route: string; isSample: 
           </div>
         )}
         <header className="topbar">
-          <span className="topbar-user">Signed in as Kate (NBPRA Administrator)</span>
+          <span className="topbar-user">{userName ? `Signed in as ${userName}` : ""}</span>
           <button className="btn" aria-label="Notifications">
             <AlertRegular /> 0
           </button>
