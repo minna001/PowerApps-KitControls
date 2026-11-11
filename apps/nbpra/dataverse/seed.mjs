@@ -59,8 +59,10 @@ if (existing.value.length) {
 const me = (await api("GET", "WhoAmI")).UserId;
 const users = (await api("GET", "systemusers?$select=fullname&$filter=isdisabled eq false and accessmode eq 0")).value;
 const others = users.filter((u) => u.systemuserid !== me);
-if (others.length === 0) throw new Error("Sample data needs at least one other user to own submissions.");
-const owner = (i) => others[i % others.length].systemuserid;
+// With nobody else in the environment the signed-in user owns everything, and
+// deciding those submissions needs the nbpra_AllowSelfApproval test switch.
+if (others.length === 0) console.log("SINGLE_USER: you are the only user here, so you own every sample submission.");
+const owner = (i) => (others.length ? others[i % others.length].systemuserid : me);
 // Five signatory seats. With fewer than five users in the tenant, people repeat.
 const pool = [me, ...others.map((u) => u.systemuserid)];
 const seat = (i) => pool[i % pool.length];

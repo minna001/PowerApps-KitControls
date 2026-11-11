@@ -74,4 +74,12 @@ if (!def) {
     defaultvalue: "false",
   });
 }
+// --allow-self-approval turns the switch on, for a single-user test environment only.
+if (args.includes("--allow-self-approval")) {
+  const d = (await api("GET", `environmentvariabledefinitions?$select=environmentvariabledefinitionid&$filter=schemaname eq '${ENV}'`)).value[0];
+  const v = (await api("GET", `environmentvariablevalues?$select=environmentvariablevalueid&$filter=_environmentvariabledefinitionid_value eq ${d.environmentvariabledefinitionid}`)).value[0];
+  if (v) await api("PATCH", `environmentvariablevalues(${v.environmentvariablevalueid})`, { value: "true" });
+  else await api("POST", "environmentvariablevalues", { value: "true", "EnvironmentVariableDefinitionId@odata.bind": `/environmentvariabledefinitions(${d.environmentvariabledefinitionid})` });
+  console.log("Test switch ON: administrators may decide their own submissions in this environment.");
+}
 console.log("Done.");
