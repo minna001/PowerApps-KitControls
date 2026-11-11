@@ -104,7 +104,7 @@ const ORIGIN = "http://nbpra.test"; // never resolved; every request is intercep
     await p.getByLabel("Proposal classification").selectOption("New product");
     await p.getByLabel("Brief business description").fill("Created by the browser journey test.");
     await p.getByLabel("Indicative jurisdictions and scope").fill("United States");
-    for (let i = 1; i <= 5; i++) await p.getByLabel("Signatory " + i, { exact: true }).selectOption({ index: 1 });
+    for (let i = 1; i <= 5; i++) await p.getByLabel(new RegExp("^Signatory " + i)).selectOption({ index: 1 });
     await shot("03-onboarding");
   });
   await step("submit onboarding", async () => {

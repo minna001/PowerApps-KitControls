@@ -78,7 +78,7 @@ export function Workspace({ source, user, id, initialTab }: { source: DataSource
         <div>
           <h1 className="page-title">{s.title}</h1>
           <div className="ws-meta">
-            {s.businessArea} · Owner {s.owner} · Sponsor {s.sponsor} · Committee {formatDate(s.meetingDate)}
+            {[s.businessArea, `Owner ${s.owner}`, s.sponsor ? `Sponsor ${s.sponsor}` : "", `Committee ${formatDate(s.meetingDate)}`].filter(Boolean).join(" · ")}
             {s.slot ? `, ${s.slot}` : ""}
           </div>
         </div>
@@ -91,7 +91,8 @@ export function Workspace({ source, user, id, initialTab }: { source: DataSource
       <Notice result={result} />
       <ol className="rail" aria-label="Progress">
         {PHASES.map((p, i) => {
-          const state = phase < 0 ? "todo" : i < phase ? "done" : i === phase ? "now" : "todo";
+          const finished = s.status === "Authorized for Committee";
+          const state = phase < 0 ? "todo" : i < phase || finished ? "done" : i === phase ? "now" : "todo";
           return (
             <li key={p} className={`rail-step ${state}`} aria-current={state === "now" ? "step" : undefined}>
               <div className="rail-name">{p}</div>
@@ -193,12 +194,21 @@ export function Workspace({ source, user, id, initialTab }: { source: DataSource
         </section>
 
         <aside className="ws-side">
-          {user.isAdmin && <AdminDecision source={source} submission={s} onDone={load} />}
+          {user.isAdmin && (
+            <AdminDecision
+              source={source}
+              submission={s}
+              onDone={() => {
+                setResult(undefined);
+                load();
+              }}
+            />
+          )}
           <div className="panel">
             <div className="panel-head">Next action</div>
             <div className="panel-body">
               <div className="next-title">{s.nextAction}</div>
-              <div className="muted">Waiting on: {s.nextActor === "Kate" ? "NBPRA administrator" : s.nextActor}</div>
+              {s.nextActor !== "None" && <div className="muted">Waiting on: {s.nextActor === "Kate" ? "NBPRA administrator" : s.nextActor}</div>}
               {ownerAction && (
                 <>
                   <p className="muted decision-hint">{ownerAction.hint}</p>
