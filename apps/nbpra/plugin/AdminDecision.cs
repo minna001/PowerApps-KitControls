@@ -245,7 +245,7 @@ namespace Nbpra.Plugins
             Reply("accepted", spec.Label + ".", C.SubmissionStatus.Label(spec.To));
         }
 
-        private static bool IsAdmin(IOrganizationService svc, Guid userId)
+        internal static bool IsAdmin(IOrganizationService svc, Guid userId)
         {
             var q = new QueryExpression("role") { ColumnSet = new ColumnSet("name") };
             var link = q.AddLink("systemuserroles", "roleid", "roleid");
@@ -255,10 +255,13 @@ namespace Nbpra.Plugins
         }
 
         /// <summary>Test switch: environment variable nbpra_AllowSelfApproval = "true". Off unless set.</summary>
-        private static bool AllowSelfApproval(IOrganizationService svc)
+        internal static bool AllowSelfApproval(IOrganizationService svc) => Flag(svc, "nbpra_AllowSelfApproval");
+
+        /// <summary>Reads a true/false environment variable; false when it is missing.</summary>
+        internal static bool Flag(IOrganizationService svc, string schemaName)
         {
             var q = new QueryExpression("environmentvariabledefinition") { ColumnSet = new ColumnSet("defaultvalue") };
-            q.Criteria.AddCondition("schemaname", ConditionOperator.Equal, "nbpra_AllowSelfApproval");
+            q.Criteria.AddCondition("schemaname", ConditionOperator.Equal, schemaName);
             var v = q.AddLink("environmentvariablevalue", "environmentvariabledefinitionid", "environmentvariabledefinitionid", JoinOperator.LeftOuter);
             v.EntityAlias = "v";
             v.Columns = new ColumnSet("value");
@@ -319,7 +322,7 @@ namespace Nbpra.Plugins
             return template.ToEntityReference();
         }
 
-        private static void WriteEvent(IOrganizationService svc, EntityReference subRef, int eventType, string action, DateTime at, EntityReference actor, int actorKind,
+        internal static void WriteEvent(IOrganizationService svc, EntityReference subRef, int eventType, string action, DateTime at, EntityReference actor, int actorKind,
             string relatedType, Guid relatedId, string oldStatus, string newStatus, string reason, int channel, string eventKey, string revision)
         {
             var e = new Entity("nbpra_businessevent");

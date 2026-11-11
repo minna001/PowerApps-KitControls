@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Registers the plug-in assembly and the nbpra_AdminDecision custom API.
+// Registers the plug-in assembly and its custom APIs (nbpra_AdminDecision, nbpra_Workflow)
+// and the two test switches. Add --single-user-test in a one-user development environment.
 // Build the plug-in first: (cd ../plugin && dotnet build -c Release).
 // Safe to re-run; the assembly content is replaced in place.
 //
@@ -26,60 +27,76 @@ let asm = (await api("GET", `pluginassemblies?$select=pluginassemblyid&$filter=n
 if (asm) await api("PATCH", `pluginassemblies(${asm})`, { content });
 else asm = (await api("POST", "pluginassemblies", { name: ASSEMBLY, content, isolationmode: 2, sourcetype: 0, description: "NBPRA server-side business operations." })).pluginassemblyid;
 
-console.log("Plug-in type");
-const TYPE = "Nbpra.Plugins.AdminDecision";
-let type = (await api("GET", `plugintypes?$select=plugintypeid&$filter=typename eq '${TYPE}'`)).value[0]?.plugintypeid;
-if (!type) type = (await api("POST", "plugintypes", { typename: TYPE, name: TYPE, friendlyname: "NBPRA admin decision", "pluginassemblyid@odata.bind": `/pluginassemblies(${asm})` })).plugintypeid;
-
-console.log("Custom API");
-const API = "nbpra_AdminDecision";
 const STRING = 10;
 const param = (n, d, optional = false) => ({ uniquename: n, name: n, displayname: n, description: d, type: STRING, isoptional: optional });
 const prop = (n, d) => ({ uniquename: n, name: n, displayname: n, description: d, type: STRING });
-const found = (await api("GET", `customapis?$select=customapiid&$filter=uniquename eq '${API}'`)).value[0];
-if (!found) {
-  await api("POST", "customapis", {
-    uniquename: API,
+
+const APIS = [
+  {
+    type: "Nbpra.Plugins.AdminDecision",
+    api: "nbpra_AdminDecision",
     name: "NBPRA admin decision",
-    displayname: "NBPRA admin decision",
     description: "Records Kate's onboarding or committee-admission decision for a submission.",
-    bindingtype: 0,
-    isfunction: false,
-    isprivate: false,
-    allowedcustomprocessingsteptype: 0,
-    "PluginTypeId@odata.bind": `/plugintypes(${type})`,
-    CustomAPIRequestParameters: [
+    params: [
       param("SubmissionId", "Submission record id."),
       param("Action", "approveOnboarding, denyOnboarding, authorize, returnFinal or rejectFinal."),
       param("Comment", "Reason; required to deny, return or reject.", true),
       param("Channel", "App, Teams or Email. Defaults to App.", true),
     ],
-    CustomAPIResponseProperties: [
-      prop("Outcome", "accepted, already_resolved, unauthorized or validation_failed."),
-      prop("Message", "Readable result."),
-      prop("NewStatus", "Submission status after the call."),
+    props: [prop("Outcome", "accepted, already_resolved, unauthorized or validation_failed."), prop("Message", "Readable result."), prop("NewStatus", "Submission status after the call.")],
+  },
+  {
+    type: "Nbpra.Plugins.Workflow",
+    api: "nbpra_Workflow",
+    name: "NBPRA workflow",
+    description: "Submitter, functional reviewer and signatory steps: onboarding, checklist sections, reviews, signatory approvals and final submission.",
+    params: [
+      param("Operation", "context, saveOnboarding, submitOnboarding, saveSection, submitSection, decideReview, requestSignatories, decideSignatory or finalSubmit."),
+      param("TargetId", "Id of the record the operation acts on.", true),
+      param("Outcome", "approve, changes or return, for decisions.", true),
+      param("Comment", "Reason; required to request changes or return.", true),
+      param("Payload", "JSON for saveOnboarding and saveSection.", true),
     ],
+    props: [prop("Outcome", "accepted, already_resolved, unauthorized or validation_failed."), prop("Message", "Readable result."), prop("Data", "Operation result, where there is one.")],
+  },
+];
+
+for (const a of APIS) {
+  console.log(`Custom API ${a.api}`);
+  let type = (await api("GET", `plugintypes?$select=plugintypeid&$filter=typename eq '${a.type}'`)).value[0]?.plugintypeid;
+  if (!type) type = (await api("POST", "plugintypes", { typename: a.type, name: a.type, friendlyname: a.name, "pluginassemblyid@odata.bind": `/pluginassemblies(${asm})` })).plugintypeid;
+  const found = (await api("GET", `customapis?$select=customapiid&$filter=uniquename eq '${a.api}'`)).value[0];
+  if (found) continue;
+  await api("POST", "customapis", {
+    uniquename: a.api,
+    name: a.name,
+    displayname: a.name,
+    description: a.description,
+    bindingtype: 0,
+    isfunction: false,
+    isprivate: false,
+    allowedcustomprocessingsteptype: 0,
+    "PluginTypeId@odata.bind": `/plugintypes(${type})`,
+    CustomAPIRequestParameters: a.params,
+    CustomAPIResponseProperties: a.props,
   });
 }
 
-console.log("Test switch (off)");
-const ENV = "nbpra_AllowSelfApproval";
-const def = (await api("GET", `environmentvariabledefinitions?$select=schemaname&$filter=schemaname eq '${ENV}'`)).value[0];
-if (!def) {
-  await api("POST", "environmentvariabledefinitions", {
-    schemaname: ENV,
-    displayname: "NBPRA allow self-approval (testing only)",
-    description: "Set to true only in a test environment to let an administrator decide their own submission.",
-    type: 100000000,
-    defaultvalue: "false",
-  });
-}
-// --allow-self-approval turns the switch on, for a single-user test environment only.
-if (args.includes("--allow-self-approval")) {
-  const d = (await api("GET", `environmentvariabledefinitions?$select=environmentvariabledefinitionid&$filter=schemaname eq '${ENV}'`)).value[0];
-  const v = (await api("GET", `environmentvariablevalues?$select=environmentvariablevalueid&$filter=_environmentvariabledefinitionid_value eq ${d.environmentvariabledefinitionid}`)).value[0];
+// Test switches. Both are off unless a value is set; --single-user-test turns them on
+// for a development environment that has only one user.
+const SWITCHES = [
+  ["nbpra_AllowSelfApproval", "NBPRA allow self-approval (testing only)", "Set to true only in a test environment to let a person decide or review their own submission."],
+  ["nbpra_AllowDuplicateSignatories", "NBPRA allow repeated signatories (testing only)", "Set to true only in a test environment with fewer than five users, so one person can fill several signatory seats."],
+];
+const turnOn = args.includes("--single-user-test") || args.includes("--allow-self-approval");
+for (const [schemaname, displayname, description] of SWITCHES) {
+  let def = (await api("GET", `environmentvariabledefinitions?$select=environmentvariabledefinitionid&$filter=schemaname eq '${schemaname}'`)).value[0];
+  if (!def) def = await api("POST", "environmentvariabledefinitions", { schemaname, displayname, description, type: 100000000, defaultvalue: "false" });
+  if (!turnOn) continue;
+  const id = def.environmentvariabledefinitionid;
+  const v = (await api("GET", `environmentvariablevalues?$select=environmentvariablevalueid&$filter=_environmentvariabledefinitionid_value eq ${id}`)).value[0];
   if (v) await api("PATCH", `environmentvariablevalues(${v.environmentvariablevalueid})`, { value: "true" });
-  else await api("POST", "environmentvariablevalues", { value: "true", "EnvironmentVariableDefinitionId@odata.bind": `/environmentvariabledefinitions(${d.environmentvariabledefinitionid})` });
-  console.log("Test switch ON: administrators may decide their own submissions in this environment.");
+  else await api("POST", "environmentvariablevalues", { value: "true", "EnvironmentVariableDefinitionId@odata.bind": `/environmentvariabledefinitions(${id})` });
+  console.log(`Test switch ON: ${schemaname}`);
 }
 console.log("Done.");

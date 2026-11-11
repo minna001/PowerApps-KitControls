@@ -94,7 +94,7 @@ function siteMapXml(withWorkspace) {
   const groups = NAV.map(
     ([g, items], gi) =>
       `<Group Id="${P}_group_${gi}" IsProfile="false">${title(g)}` +
-      items.map(([t, label]) => `<SubArea Id="${P}_sub_${t}" Entity="${P}_${t}">${title(label)}</SubArea>`).join("") +
+      items.map(([t, label]) => `<SubArea Id="${P}_sub_${t}" Entity="${P}_${t}" VectorIcon="$webresource:${P}_/icons/${t}.svg">${title(label)}</SubArea>`).join("") +
       `</Group>`,
   ).join("");
   // The React workspace, shown only where webapp.mjs has uploaded it as a web resource.
@@ -109,6 +109,18 @@ const SITEMAP_UNIQUE = `${P}_AdminSiteMap`;
 
 console.log(`Views (${VIEWS.length})`);
 for (const v of VIEWS) await upsertView(v);
+
+console.log("Navigation icons");
+const SVG = 11;
+for (const [, items] of NAV) {
+  for (const [t] of items) {
+    const name = `${P}_/icons/${t}.svg`;
+    const content = readFileSync(join(here, `webresources/icons/${t}.svg`)).toString("base64");
+    const found = (await api("GET", `webresourceset?$select=webresourceid&$filter=name eq '${name}'`)).value[0];
+    if (found) await api("PATCH", `webresourceset(${found.webresourceid})`, { content });
+    else await api("POST", "webresourceset", { name, displayname: `NBPRA icon: ${t}`, webresourcetype: SVG, content });
+  }
+}
 
 console.log("Site map");
 const hasWorkspace = (await api("GET", `webresourceset?$select=webresourceid&$filter=name eq '${P}_/app.html'`)).value.length > 0;
