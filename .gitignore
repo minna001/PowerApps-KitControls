@@ -8,3 +8,10 @@
 
 # output directory
 /out
+# build output and dependencies
+node_modules
+bin
+/apps/**/obj
+/apps/**/out
+/apps/**/dist
+*.msapp
