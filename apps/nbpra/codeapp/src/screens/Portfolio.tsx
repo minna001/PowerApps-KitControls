@@ -19,11 +19,11 @@ const ATTENTION: { key: Attention; label: string; test: (s: Submission) => boole
 
 type Sort = "attention" | "age" | "meeting" | "title";
 
-export function Portfolio({ source }: { source: DataSource }) {
+export function Portfolio({ source, initialAttention = "all" }: { source: DataSource; initialAttention?: Attention }) {
   const [all, setAll] = useState<Submission[]>([]);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<"" | SubmissionStatus>("");
-  const [attention, setAttention] = useState<Attention>("all");
+  const [attention, setAttention] = useState<Attention>(initialAttention);
   const [scope, setScope] = useState<"active" | "closed" | "all">("active");
   const [sort, setSort] = useState<Sort>("attention");
 
@@ -57,8 +57,8 @@ export function Portfolio({ source }: { source: DataSource }) {
 
   return (
     <>
-      <div className="eyebrow">Register</div>
-      <h1 className="page-title">All submissions</h1>
+      <div className="eyebrow">{initialAttention === "kate" ? "Admin queue" : "Register"}</div>
+      <h1 className="page-title">{initialAttention === "kate" ? "Awaiting Kate's decision" : "All submissions"}</h1>
 
       <div className="portfolio">
         <section>

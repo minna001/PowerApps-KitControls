@@ -10,6 +10,7 @@ import {
   SettingsRegular,
   WarningRegular,
   AlertRegular,
+  CheckmarkCircleRegular,
 } from "@fluentui/react-icons";
 
 interface NavItem {
@@ -25,7 +26,8 @@ const NAV: { heading: string; items: NavItem[] }[] = [
     items: [
       { label: "Home", icon: <HomeRegular /> },
       { label: "My submissions", icon: <DocumentMultipleRegular /> },
-      { label: "My approvals", icon: <ClipboardTaskRegular /> },
+      { label: "My approvals", icon: <CheckmarkCircleRegular /> },
+      { label: "Admin queue", href: "#/queue", icon: <ClipboardTaskRegular />, match: (r) => r === "/queue" },
       {
         label: "Portfolio",
         href: "#/portfolio",
@@ -39,7 +41,7 @@ const NAV: { heading: string; items: NavItem[] }[] = [
     heading: "Records",
     items: [
       { label: "Communications", icon: <MailRegular /> },
-      { label: "Audit timeline", icon: <HistoryRegular /> },
+      { label: "Audit timeline", href: "#/audit", icon: <HistoryRegular />, match: (r) => r === "/audit" },
       { label: "Exceptions", icon: <WarningRegular /> },
     ],
   },

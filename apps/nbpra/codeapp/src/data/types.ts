@@ -98,3 +98,26 @@ export function phaseIndex(s: SubmissionStatus): number {
       return -1;
   }
 }
+
+export type Channel = "App" | "Teams" | "Email" | "System";
+
+/** One row of the append-only business timeline (requirements section 9.2). */
+export interface BusinessEvent {
+  id: string;
+  submissionId: string;
+  reference: string;
+  /** UTC, ISO 8601. */
+  occurredAt: string;
+  actor: string;
+  eventType: string;
+  action: string;
+  oldStatus?: string;
+  newStatus?: string;
+  revision?: string;
+  channel: Channel;
+  reason?: string;
+}
+
+export type AdminAction = "approveOnboarding" | "denyOnboarding" | "authorize" | "returnFinal" | "rejectFinal";
+
+export type ActionResult = { ok: true } | { ok: false; error: string };

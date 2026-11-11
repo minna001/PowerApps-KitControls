@@ -1,5 +1,8 @@
 import type { DataSource } from "./source";
 import type {
+  ActionResult,
+  AdminAction,
+  BusinessEvent,
   DecisionState,
   SectionStatus,
   SectionSummary,
@@ -129,10 +132,151 @@ function buildSignatories(s: Submission): Signatory[] {
   }));
 }
 
+// ---- Timeline -------------------------------------------------------------
+
+const NOW = Date.parse("2026-11-11T09:00:00Z");
+const DAY = 86400000;
+const REACHED: SubmissionStatus[] = [
+  "Onboarding Draft",
+  "Awaiting Onboarding Review",
+  "Checklist in Progress",
+  "Awaiting Signatory Approval",
+  "Ready for Final Submission",
+  "Awaiting Final Admin Review",
+  "Authorized for Committee",
+];
+
+function buildEvents(s: Submission): BusinessEvent[] {
+  const out: BusinessEvent[] = [];
+  const start = NOW - s.ageDays * DAY;
+  let n = 0;
+  const add = (frac: number, e: Omit<BusinessEvent, "id" | "submissionId" | "reference" | "occurredAt">) => {
+    n++;
+    out.push({
+      id: `${s.id}-${n}`,
+      submissionId: s.id,
+      reference: s.reference,
+      occurredAt: new Date(start + frac * s.ageDays * DAY + n * 47 * 60000).toISOString(),
+      ...e,
+    });
+  };
+  // How far along the main path this record got.
+  const path: Partial<Record<SubmissionStatus, number>> = {
+    "Onboarding Denied": 1,
+    "Final Changes Requested": 5,
+    "Final Rejected": 5,
+    Withdrawn: 2,
+  };
+  const reached = path[s.status] ?? REACHED.indexOf(s.status);
+
+  add(0, { actor: s.owner, eventType: "Submission", action: "Draft created", newStatus: "Onboarding Draft", channel: "App" });
+  if (reached >= 1) {
+    add(0.05, { actor: s.owner, eventType: "Slot", action: "Onboarding submitted with five signatories", oldStatus: "Onboarding Draft", newStatus: "Awaiting Onboarding Review", revision: "Onboarding rev 1", channel: "App" });
+  }
+  if (s.status === "Onboarding Denied") {
+    add(0.3, { actor: "Kate", eventType: "Slot", action: "Onboarding denied", oldStatus: "Awaiting Onboarding Review", newStatus: "Onboarding Denied", revision: "Onboarding rev 1", channel: "Email", reason: "Requested meeting is outside the committee remit." });
+  }
+  if (reached >= 2) {
+    add(0.1, { actor: "Kate", eventType: "Slot", action: "Onboarding approved; slot confirmed", oldStatus: "Awaiting Onboarding Review", newStatus: "Checklist in Progress", revision: "Onboarding rev 1", channel: "Teams" });
+    add(0.1, { actor: "System", eventType: "Checklist", action: "Checklist unlocked; template v1 pinned", channel: "System" });
+    if (s.functionalApproved > 0) {
+      add(0.35, { actor: s.owner, eventType: "Section", action: "Business and product overview submitted", revision: "BUS rev 1", channel: "App" });
+      add(0.45, { actor: "Amara Bello", eventType: "Review request", action: "NBPRA approved Business and product overview", revision: "BUS rev 1", channel: "App" });
+    }
+  }
+  if (reached >= 3) {
+    add(0.6, { actor: "System", eventType: "Section", action: "All required functional approvals current", channel: "System" });
+    add(0.62, { actor: s.owner, eventType: "Signatory", action: "Package sent to five signatories", oldStatus: "Checklist in Progress", newStatus: "Awaiting Signatory Approval", revision: "Package rev 1", channel: "App" });
+    SIGNATORY_NAMES.slice(0, s.signatoriesApproved).forEach((name, i) =>
+      add(0.66 + i * 0.03, { actor: name, eventType: "Signatory", action: `Signatory ${i + 1} approved`, revision: "Package rev 1", channel: i % 2 ? "Email" : "App" }),
+    );
+  }
+  if (reached >= 4) {
+    add(0.82, { actor: "System", eventType: "Signatory", action: "All five signatories approved", oldStatus: "Awaiting Signatory Approval", newStatus: "Ready for Final Submission", revision: "Package rev 1", channel: "System" });
+  }
+  if (reached >= 5) {
+    add(0.88, { actor: s.owner, eventType: "Final submission", action: "Final submission made", oldStatus: "Ready for Final Submission", newStatus: "Awaiting Final Admin Review", revision: "Package rev 1", channel: "App" });
+  }
+  if (s.status === "Final Changes Requested") {
+    add(0.95, { actor: "Kate", eventType: "Admission", action: "Returned for changes", oldStatus: "Awaiting Final Admin Review", newStatus: "Final Changes Requested", revision: "Package rev 1", channel: "App", reason: "Liquidity assumptions need Finance to re-review." });
+    add(0.95, { actor: "System", eventType: "Invalidation", action: "Five signatory approvals invalidated", revision: "Package rev 1", channel: "System" });
+  }
+  if (s.status === "Authorized for Committee") {
+    add(0.96, { actor: "Kate", eventType: "Admission", action: "Committee attendance authorized", oldStatus: "Awaiting Final Admin Review", newStatus: "Authorized for Committee", revision: "Package rev 1", channel: "Teams" });
+  }
+  if (s.status === "Withdrawn") {
+    add(0.5, { actor: s.owner, eventType: "Withdrawal", action: "Submission withdrawn", oldStatus: "Checklist in Progress", newStatus: "Withdrawn", channel: "App", reason: "Product shelved for this financial year." });
+  }
+  if (s.blocker?.includes("canceled")) {
+    add(0.97, { actor: "Kate", eventType: "Slot", action: "Meeting canceled; slot allocation released", channel: "App", reason: "Committee quorum not available." });
+  }
+  return out;
+}
+
+const events: BusinessEvent[] = submissions.flatMap(buildEvents);
+const newestFirst = (a: BusinessEvent, b: BusinessEvent) => b.occurredAt.localeCompare(a.occurredAt);
+
+const ACTIONS: Record<AdminAction, { from: SubmissionStatus; to: SubmissionStatus; needsReason: boolean; type: string; label: string }> = {
+  approveOnboarding: { from: "Awaiting Onboarding Review", to: "Checklist in Progress", needsReason: false, type: "Slot", label: "Onboarding approved; slot confirmed" },
+  denyOnboarding: { from: "Awaiting Onboarding Review", to: "Onboarding Denied", needsReason: true, type: "Slot", label: "Onboarding denied" },
+  authorize: { from: "Awaiting Final Admin Review", to: "Authorized for Committee", needsReason: false, type: "Admission", label: "Committee attendance authorized" },
+  returnFinal: { from: "Awaiting Final Admin Review", to: "Final Changes Requested", needsReason: true, type: "Admission", label: "Returned for changes" },
+  rejectFinal: { from: "Awaiting Final Admin Review", to: "Final Rejected", needsReason: true, type: "Admission", label: "Admission rejected" },
+};
+
+function decide(id: string, action: AdminAction, comment: string): ActionResult {
+  const s = submissions.find((x) => x.id === id);
+  const a = ACTIONS[action];
+  if (!s) return { ok: false, error: "Submission not found." };
+  if (s.status !== a.from) return { ok: false, error: "This request has already been resolved." };
+  if (a.needsReason && !comment.trim()) return { ok: false, error: "Enter a reason before recording this decision." };
+  if ((action === "approveOnboarding" || action === "authorize") && !s.meetingDate) {
+    return { ok: false, error: "There is no valid meeting slot. Assign a slot before approving." };
+  }
+  const old = s.status;
+  s.status = a.to;
+  s.blocker = undefined;
+  if (action === "approveOnboarding") {
+    s.slotConfirmed = true;
+    s.functionalRequired = 6;
+    s.nextAction = "Complete the checklist";
+    s.nextActor = "Submitter";
+  } else if (action === "authorize") {
+    s.nextAction = "Attend committee";
+    s.nextActor = "None";
+  } else {
+    s.nextAction = action === "rejectFinal" ? "Closed pending reopen" : "Revise and resubmit";
+    s.nextActor = "Submitter";
+    s.blocker = `Kate: ${comment.trim()}`;
+    if (action === "returnFinal") s.signatoriesApproved = 0;
+  }
+  events.push({
+    id: `${s.id}-d${events.length}`,
+    submissionId: s.id,
+    reference: s.reference,
+    occurredAt: new Date().toISOString(),
+    actor: "Kate",
+    eventType: a.type,
+    action: a.label,
+    oldStatus: old,
+    newStatus: a.to,
+    revision: action.includes("Onboarding") ? "Onboarding rev 1" : "Package rev 1",
+    channel: "App",
+    reason: comment.trim() || undefined,
+  });
+  return { ok: true };
+}
+
 export const sampleSource: DataSource = {
+  async listEvents(submissionId) {
+    return events.filter((e) => !submissionId || e.submissionId === submissionId).sort(newestFirst);
+  },
+  async decide(id, action, comment) {
+    return decide(id, action, comment);
+  },
   isSample: true,
   async listSubmissions() {
-    return submissions;
+    return submissions.map((x) => ({ ...x }));
   },
   async getSubmission(id) {
     const s = submissions.find((x) => x.id === id);

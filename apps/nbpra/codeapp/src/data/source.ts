@@ -1,4 +1,4 @@
-import type { Submission, SubmissionDetail } from "./types";
+import type { ActionResult, AdminAction, BusinessEvent, Submission, SubmissionDetail } from "./types";
 
 /**
  * Everything the screens read goes through this interface. The sample
@@ -9,4 +9,8 @@ export interface DataSource {
   readonly isSample: boolean;
   listSubmissions(): Promise<Submission[]>;
   getSubmission(id: string): Promise<SubmissionDetail | undefined>;
+  /** Newest first. Omit the id for every submission the user may see. */
+  listEvents(submissionId?: string): Promise<BusinessEvent[]>;
+  /** Kate's onboarding and final-admission decisions. The server enforces the gates. */
+  decide(submissionId: string, action: AdminAction, comment: string): Promise<ActionResult>;
 }

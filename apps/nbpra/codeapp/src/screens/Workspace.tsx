@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { Tab, TabList } from "@fluentui/react-components";
 import { ErrorCircleRegular } from "@fluentui/react-icons";
 import type { DataSource } from "../data/source";
-import { PHASES, phaseIndex, type SubmissionDetail } from "../data/types";
+import { PHASES, phaseIndex, type BusinessEvent, type SubmissionDetail } from "../data/types";
+import { AdminDecision } from "../components/AdminDecision";
+import { TimelineTable } from "../components/Timeline";
 import { DecisionPill, Meter, Pill, SectionPill, StatusPill, formatDate } from "../components/bits";
 
 const TABS = ["Overview", "Checklist", "Evidence", "Functional reviews", "Signatories", "Communications", "Timeline"];
@@ -17,9 +19,16 @@ export function Workspace({ source, id }: { source: DataSource; id: string }) {
   const [s, setS] = useState<SubmissionDetail | null | undefined>(null);
   const [tab, setTab] = useState("Overview");
 
+  const [events, setEvents] = useState<BusinessEvent[]>([]);
+
+  const load = () => {
+    source.getSubmission(id).then(setS);
+    source.listEvents(id).then(setEvents);
+  };
   useEffect(() => {
     setS(null);
-    source.getSubmission(id).then(setS);
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [source, id]);
 
   if (s === null) return <p>Loading…</p>;
@@ -144,6 +153,10 @@ export function Workspace({ source, id }: { source: DataSource; id: string }) {
                 </table>
               </div>
             </div>
+          ) : tab === "Timeline" ? (
+            <div className="tab-body">
+              <TimelineTable events={events} />
+            </div>
           ) : (
             <div className="tab-body">
               <p className="muted">The {tab} tab is not built yet.</p>
@@ -152,6 +165,7 @@ export function Workspace({ source, id }: { source: DataSource; id: string }) {
         </section>
 
         <aside className="ws-side">
+          <AdminDecision source={source} submission={s} onDone={load} />
           <div className="panel">
             <div className="panel-head">Next action</div>
             <div className="panel-body">
