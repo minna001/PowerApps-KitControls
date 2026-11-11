@@ -278,7 +278,17 @@ async function main() {
   }
 }
 
-main().catch((e) => {
-  console.error(e.message, e.cause?.message ?? "");
-  process.exit(1);
-});
+// Every step checks for existence first, so after a dropped connection or a
+// throttling response the whole run is simply started again.
+for (let attempt = 1; ; attempt++) {
+  try {
+    await main();
+    break;
+  } catch (e) {
+    const transient = e.message === "fetch failed" || / -> (429|502|503|504)\n/.test(e.message);
+    console.error(e.message, e.cause?.message ?? "");
+    if (!transient || attempt >= 10) process.exit(1);
+    console.error(`Transient failure; restarting (attempt ${attempt + 1})`);
+    await new Promise((r) => setTimeout(r, 5000 * attempt));
+  }
+}
