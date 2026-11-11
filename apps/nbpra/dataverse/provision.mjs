@@ -34,6 +34,7 @@ const ln = (name) => (name in SYSTEM_TABLES ? name : `${P}_${name}`);
 const label = (text) => ({ LocalizedLabels: [{ Label: text, LanguageCode: 1033 }] });
 const titleCase = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 const plan = [];
+const choiceIds = {}; // choice name -> MetadataId; a column must bind to its choice by id
 
 // ---- auth -------------------------------------------------------------------
 
@@ -150,7 +151,7 @@ function columnPayload(table, [name, type, required, note]) {
     case "date":
       return { ...base, "@odata.type": T("DateTimeAttributeMetadata"), Format: "DateOnly", DateTimeBehavior: { Value: "DateOnly" } };
     case "choice":
-      return { ...base, "@odata.type": T("PicklistAttributeMetadata"), "GlobalOptionSet@odata.bind": `/GlobalOptionSetDefinitions(Name='${P}_${arg}')` };
+      return { ...base, "@odata.type": T("PicklistAttributeMetadata"), "GlobalOptionSet@odata.bind": `/GlobalOptionSetDefinitions(${choiceIds[arg]})` };
     case "file":
       return { ...base, "@odata.type": T("FileAttributeMetadata"), MaxSizeInKB: 32768 };
     default:
@@ -207,6 +208,11 @@ async function main() {
       OptionSetType: "Picklist",
       Options: options.map((o, i) => ({ Value: OPTION_PREFIX * 10000 + i, Label: label(o) })),
     });
+  }
+
+  for (const name of Object.keys(schema.choices)) {
+    const o = await api("GET", `GlobalOptionSetDefinitions(Name='${P}_${name}')?$select=MetadataId`);
+    choiceIds[name] = o?.MetadataId ?? "00000000-0000-0000-0000-000000000000";
   }
 
   step(`Tables (${schema.tables.length})`);
