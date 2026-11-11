@@ -6,11 +6,12 @@
 //   node provision.mjs --url https://<org>.crm.dynamics.com            (device-code sign-in)
 //   node provision.mjs --url https://<org>.crm.dynamics.com --dry-run  (no network; writes plan.json)
 //
+// Behind a proxy, run with NODE_USE_ENV_PROXY=1 (Node 22.21+).
 // Service principal instead of device code: set DV_TENANT, DV_CLIENT_ID, DV_CLIENT_SECRET.
 //
 // NOT YET RUN AGAINST A REAL ENVIRONMENT.
 
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -36,7 +37,24 @@ const plan = [];
 
 // ---- auth -------------------------------------------------------------------
 
+// Optional: DV_TOKEN_FILE names a private file (outside the repo) where this
+// script keeps its own access token for up to an hour, so repeat runs in one
+// working session do not each need a new sign-in.
+function cachedToken() {
+  const f = process.env.DV_TOKEN_FILE;
+  if (!f || !existsSync(f)) return undefined;
+  const c = JSON.parse(readFileSync(f, "utf8"));
+  return c.url === url && c.expires > Date.now() + 5 * 60000 ? c.token : undefined;
+}
+function cacheToken(j) {
+  const f = process.env.DV_TOKEN_FILE;
+  if (f) writeFileSync(f, JSON.stringify({ url, token: j.access_token, expires: Date.now() + j.expires_in * 1000 }), { mode: 0o600 });
+  return j.access_token;
+}
+
 async function getToken() {
+  const c = cachedToken();
+  if (c) return c;
   const { DV_TENANT, DV_CLIENT_ID, DV_CLIENT_SECRET } = process.env;
   const scope = `${url}/.default`;
   if (DV_TENANT && DV_CLIENT_ID && DV_CLIENT_SECRET) {
@@ -62,7 +80,7 @@ async function getToken() {
         body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:device_code", client_id, device_code: dc.device_code }),
       })
     ).json();
-    if (j.access_token) return j.access_token;
+    if (j.access_token) return cacheToken(j);
     if (j.error !== "authorization_pending") throw new Error(`Sign-in failed: ${j.error_description}`);
   }
 }
@@ -261,6 +279,6 @@ async function main() {
 }
 
 main().catch((e) => {
-  console.error(e.message);
+  console.error(e.message, e.cause?.message ?? "");
   process.exit(1);
 });
