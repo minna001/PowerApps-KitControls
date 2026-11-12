@@ -28,18 +28,32 @@ const managed = args.includes("--managed");
 const sol = (await api("GET", `solutions?$select=solutionid,version&$filter=uniquename eq '${NAME}'`)).value[0];
 if (!sol) throw new Error(`Solution ${NAME} not found.`);
 
+// Test-switch values that sit inside the solution would travel with it. They
+// are deleted for the export and recreated afterwards outside the solution, so
+// this environment keeps its settings and the export carries only the
+// definitions, which default to off.
 console.log("Test switches");
-const ENV_VALUE = 381; // solution component type: environment variable value
+const restore = [];
 for (const s of ["nbpra_AllowSelfApproval", "nbpra_AllowDuplicateSignatories"]) {
   const def = (await api("GET", `environmentvariabledefinitions?$select=environmentvariabledefinitionid&$filter=schemaname eq '${s}'`)).value[0];
   if (!def) continue;
   for (const v of (await api("GET", `environmentvariablevalues?$select=environmentvariablevalueid,value&$filter=_environmentvariabledefinitionid_value eq ${def.environmentvariabledefinitionid}`)).value) {
     const inSolution = (await api("GET", `solutioncomponents?$select=solutioncomponentid&$filter=_solutionid_value eq ${sol.solutionid} and objectid eq ${v.environmentvariablevalueid}`)).value.length > 0;
-    if (inSolution) await api("POST", "RemoveSolutionComponent", { ComponentId: v.environmentvariablevalueid, ComponentType: ENV_VALUE, SolutionUniqueName: NAME });
-    console.log(`  ${s}: value "${v.value}" stays in this environment, ${inSolution ? "removed from" : "not in"} the solution`);
+    if (inSolution) {
+      await api("DELETE", `environmentvariablevalues(${v.environmentvariablevalueid})`);
+      restore.push({ name: s, definition: def.environmentvariabledefinitionid, value: v.value });
+    }
+    console.log(`  ${s}: value "${v.value}" ${inSolution ? "taken out of the solution for the export" : "is not in the solution"}`);
+  }
+}
+async function putBack() {
+  for (const r of restore.splice(0)) {
+    await api("POST", "environmentvariablevalues", { value: r.value, "EnvironmentVariableDefinitionId@odata.bind": `/environmentvariabledefinitions(${r.definition})` });
+    console.log(`  ${r.name}: value "${r.value}" restored in this environment`);
   }
 }
 
+try {
 console.log(`Version ${sol.version} -> ${version}; publishing`);
 await api("PATCH", `solutions(${sol.solutionid})`, { version });
 await api("POST", "PublishAllXml", {});
@@ -56,3 +70,6 @@ const r = await api("POST", "ExportSolution", { SolutionName: NAME, Managed: man
 const bytes = Buffer.from(r.ExportSolutionFile, "base64");
 writeFileSync(out, bytes);
 console.log(`Wrote ${out} (${Math.round(bytes.length / 1024)} KB)`);
+} finally {
+  await putBack();
+}
