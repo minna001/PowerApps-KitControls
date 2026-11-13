@@ -1,0 +1,13 @@
+﻿Name,Submission,Purpose,Policy,Approval Request status,Package revision,Slot request,Idempotency key,Closed at
+Onboarding: Corporate Card Virtual Issuance,Corporate Card Virtual Issuance,Onboarding,One authorized,Pending,,Corporate Card Virtual Issuance · onboarding rev 1,sample:1:onboarding,
+Onboarding: Carbon Credit Custody,Carbon Credit Custody,Onboarding,One authorized,Pending,,Carbon Credit Custody · onboarding rev 1,sample:2:onboarding,
+Onboarding: Instant Payee Verification,Instant Payee Verification,Onboarding,One authorized,Denied,,Instant Payee Verification · onboarding rev 1,sample:3:onboarding,2026-11-02T22:40:20Z
+Onboarding: SME Overdraft Repricing,SME Overdraft Repricing,Onboarding,One authorized,Approved,,SME Overdraft Repricing · onboarding rev 1,sample:4:onboarding,2026-10-16T20:16:20Z
+Onboarding: Crypto Custody Staking Extension,Crypto Custody Staking Extension,Onboarding,One authorized,Approved,,Crypto Custody Staking Extension · onboarding rev 1,sample:5:onboarding,2026-07-08T22:40:20Z
+Onboarding: Green Mortgage Rate Discount,Green Mortgage Rate Discount,Onboarding,One authorized,Approved,,Green Mortgage Rate Discount · onboarding rev 1,sample:6:onboarding,2026-09-22T13:04:20Z
+Onboarding: Supplier Finance Onboarding Portal,Supplier Finance Onboarding Portal,Onboarding,One authorized,Approved,,Supplier Finance Onboarding Portal · onboarding rev 1,sample:7:onboarding,2026-09-10T20:16:20Z
+Committee admission: Supplier Finance Onboarding Portal,Supplier Finance Onboarding Portal,Final Committee Admission,One authorized,Pending,1,,sample:7:final,
+Onboarding: Private Credit Feeder Fund,Private Credit Feeder Fund,Onboarding,One authorized,Approved,,Private Credit Feeder Fund · onboarding rev 1,sample:8:onboarding,2026-08-13T22:40:20Z
+Committee admission: Private Credit Feeder Fund,Private Credit Feeder Fund,Final Committee Admission,One authorized,Pending,1,,sample:8:final,
+Onboarding: Real-Time FX Rate Lock,Real-Time FX Rate Lock,Onboarding,One authorized,Approved,,Real-Time FX Rate Lock · onboarding rev 1,sample:9:onboarding,2026-05-05T03:28:20Z
+Committee admission: Real-Time FX Rate Lock,Real-Time FX Rate Lock,Final Committee Admission,One authorized,Approved,1,,sample:9:final,2026-11-05T04:25:56Z

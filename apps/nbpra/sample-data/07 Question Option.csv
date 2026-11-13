@@ -1,0 +1,7 @@
+﻿Name,Question definition,Value code,Label,Display order,Is active
+BUS-02 Retail,BUS-02,RETAIL,Retail,10,Yes
+BUS-02 Corporate,BUS-02,CORPORATE,Corporate,20,Yes
+BUS-02 Institutional,BUS-02,INSTITUTIONAL,Institutional,30,Yes
+RSK-02 Low,RSK-02,LOW,Low,10,Yes
+RSK-02 Medium,RSK-02,MEDIUM,Medium,20,Yes
+RSK-02 High,RSK-02,HIGH,High,30,Yes

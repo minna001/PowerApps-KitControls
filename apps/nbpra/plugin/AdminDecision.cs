@@ -111,6 +111,12 @@ namespace Nbpra.Plugins
             var slotRequestRef = sub.GetAttributeValue<EntityReference>("nbpra_currentslotrequest");
             if (onboarding)
             {
+                if (slotRequestRef == null)
+                {
+                    // Records loaded from a spreadsheet may not have the pointer set; use the one pending request.
+                    var pending = Sections.Rows(svc, "nbpra_slotrequest", new ColumnSet(false), ("nbpra_submission", submissionId), ("nbpra_status", C.SlotRequestStatus.Pending));
+                    if (pending.Count == 1) slotRequestRef = pending[0].ToEntityReference();
+                }
                 if (slotRequestRef == null) { Reply("validation_failed", "The submission has no onboarding request to decide."); return; }
                 slotRequest = svc.Retrieve("nbpra_slotrequest", slotRequestRef.Id, new ColumnSet("nbpra_status", "nbpra_requestedslot", "nbpra_revisionnumber", "nbpra_decisionrequest"));
                 if ((slotRequest.GetAttributeValue<OptionSetValue>("nbpra_status")?.Value ?? 0) != C.SlotRequestStatus.Pending)
@@ -215,6 +221,7 @@ namespace Nbpra.Plugins
                 }
                 sr["nbpra_decisionrequest"] = new EntityReference("nbpra_approvalrequest", requestId);
                 svc.Update(sr);
+                subUpdate["nbpra_currentslotrequest"] = slotRequest.ToEntityReference();
             }
             else if (action == "authorize")
             {

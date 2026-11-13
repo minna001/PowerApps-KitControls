@@ -16,6 +16,8 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { columnLabel } from "./labels.mjs";
+
 const here = dirname(fileURLToPath(import.meta.url));
 const schema = JSON.parse(readFileSync(join(here, "schema.json"), "utf8"));
 const args = process.argv.slice(2);
@@ -88,7 +90,7 @@ async function getToken() {
 }
 
 let token;
-async function api(method, path, body, { solution = true } = {}) {
+async function api(method, path, body, { solution = true, mergeLabels = false } = {}) {
   if (dryRun) {
     if (method !== "GET") plan.push({ method, path, body });
     return method === "GET" ? null : {};
@@ -101,6 +103,7 @@ async function api(method, path, body, { solution = true } = {}) {
       "OData-Version": "4.0",
       Accept: "application/json",
       ...(solution && method !== "GET" ? { "MSCRM.SolutionUniqueName": schema.solution } : {}),
+      ...(mergeLabels ? { "MSCRM.MergeLabels": "true" } : {}),
     },
     body: body ? JSON.stringify(body) : undefined,
   });
@@ -120,7 +123,7 @@ function columnPayload(table, [name, type, required, note]) {
   const [kind, arg] = type.split(/:(.*)/s);
   const base = {
     SchemaName: `${P}_${name}`,
-    DisplayName: label(titleCase(name)),
+    DisplayName: label(columnLabel(table.display, name)),
     Description: label(note || ""),
     RequiredLevel: { Value: required ? "ApplicationRequired" : "None" },
     IsAuditEnabled: { Value: true },
@@ -172,7 +175,7 @@ function lookupPayload(table, [name, type, required, note]) {
     Lookup: {
       "@odata.type": T("LookupAttributeMetadata"),
       SchemaName: `${P}_${name}`,
-      DisplayName: label(titleCase(name)),
+      DisplayName: label(columnLabel(table.display, name)),
       Description: label(note || ""),
       RequiredLevel: { Value: required ? "ApplicationRequired" : "None" },
       IsAuditEnabled: { Value: true },
@@ -299,6 +302,26 @@ async function main() {
       if (await exists(`RelationshipDefinitions(SchemaName='${P}_${t.name}_${c[0]}')`)) continue;
       await api("POST", "RelationshipDefinitions", lookupPayload(t, c));
     }
+  }
+
+  // Brings the labels of columns created by an earlier version of this script into line.
+  step("Column labels");
+  if (!dryRun) {
+    let relabelled = 0;
+    for (const t of schema.tables) {
+      const e = `EntityDefinitions(LogicalName='${ln(t.name)}')`;
+      const current = await api("GET", `${e}/Attributes?$select=LogicalName,DisplayName`);
+      for (const c of t.columns) {
+        const want = columnLabel(t.display, c[0]);
+        const have = current.value.find((a) => a.LogicalName === `${P}_${c[0]}`)?.DisplayName?.UserLocalizedLabel?.Label;
+        if (have === want) continue;
+        const full = await api("GET", `${e}/Attributes(LogicalName='${P}_${c[0]}')`);
+        full.DisplayName = label(want);
+        await api("PUT", `${e}/Attributes(LogicalName='${P}_${c[0]}')`, full, { mergeLabels: true });
+        relabelled++;
+      }
+    }
+    console.log(`  ${relabelled} relabelled`);
   }
 
   step("Alternate keys");

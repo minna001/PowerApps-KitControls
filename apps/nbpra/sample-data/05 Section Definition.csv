@@ -1,0 +1,10 @@
+﻿Name,Template,Code,Display order,Requires approval
+Business and product overview,NBPRA checklist (sample),BUS,10,Yes
+Scope and jurisdictions,NBPRA checklist (sample),SCO,20,Yes
+Legal,NBPRA checklist (sample),LEG,30,Yes
+Tax,NBPRA checklist (sample),TAX,40,Yes
+Financial and commercial,NBPRA checklist (sample),FIN,50,Yes
+Risk and compliance,NBPRA checklist (sample),RSK,60,Yes
+Operating model,NBPRA checklist (sample),OPS,70,Yes
+Technology and information security,NBPRA checklist (sample),TEC,80,Yes
+Privacy and data,NBPRA checklist (sample),PRV,90,Yes

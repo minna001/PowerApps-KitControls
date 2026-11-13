@@ -1,0 +1,47 @@
+﻿Name,Submission,Event type,Action,Occurred at,Actor kind,Channel,Old status,New status,Summary,Reason,Event key
+Draft created,Tokenised Deposit Pilot,Submission,Draft created,2026-11-07T17:52:20Z,Human,App,,Onboarding Draft,,,sample:0:1
+Draft created,Corporate Card Virtual Issuance,Submission,Draft created,2026-11-04T17:52:20Z,Human,App,,Onboarding Draft,,,sample:1:1
+Onboarding submitted with five signatories,Corporate Card Virtual Issuance,Slot,Onboarding submitted with five signatories,2026-11-05T04:40:20Z,Human,App,Onboarding Draft,Awaiting Onboarding Review,Onboarding rev 1,,sample:1:2
+Draft created,Carbon Credit Custody,Submission,Draft created,2026-11-10T17:52:20Z,Human,App,,Onboarding Draft,,,sample:2:1
+Onboarding submitted with five signatories,Carbon Credit Custody,Slot,Onboarding submitted with five signatories,2026-11-10T21:28:20Z,Human,App,Onboarding Draft,Awaiting Onboarding Review,Onboarding rev 1,,sample:2:2
+Draft created,Instant Payee Verification,Submission,Draft created,2026-11-01T17:52:20Z,Human,App,,Onboarding Draft,,,sample:3:1
+Onboarding submitted with five signatories,Instant Payee Verification,Slot,Onboarding submitted with five signatories,2026-11-02T08:16:20Z,Human,App,Onboarding Draft,Awaiting Onboarding Review,Onboarding rev 1,,sample:3:2
+Onboarding denied,Instant Payee Verification,Slot,Onboarding denied,2026-11-05T08:16:20Z,Human,Email,Awaiting Onboarding Review,Onboarding Denied,Onboarding rev 1,Requested meeting is outside the committee remit.,sample:3:3
+Draft created,SME Overdraft Repricing,Submission,Draft created,2026-10-13T17:52:20Z,Human,App,,Onboarding Draft,,,sample:4:1
+Onboarding submitted with five signatories,SME Overdraft Repricing,Slot,Onboarding submitted with five signatories,2026-10-15T07:04:20Z,Human,App,Onboarding Draft,Awaiting Onboarding Review,Onboarding rev 1,,sample:4:2
+Onboarding approved; slot confirmed,SME Overdraft Repricing,Slot,Onboarding approved; slot confirmed,2026-10-16T20:16:20Z,Human,Teams,Awaiting Onboarding Review,Checklist in Progress,Onboarding rev 1,,sample:4:3
+Checklist unlocked,SME Overdraft Repricing,Checklist,Checklist unlocked,2026-10-17T03:42:44Z,System,System,,,,,sample:4:4
+Draft created,Crypto Custody Staking Extension,Submission,Draft created,2026-06-24T17:52:20Z,Human,App,,Onboarding Draft,,,sample:5:1
+Onboarding submitted with five signatories,Crypto Custody Staking Extension,Slot,Onboarding submitted with five signatories,2026-07-01T20:16:20Z,Human,App,Onboarding Draft,Awaiting Onboarding Review,Onboarding rev 1,,sample:5:2
+Onboarding approved; slot confirmed,Crypto Custody Staking Extension,Slot,Onboarding approved; slot confirmed,2026-07-08T22:40:20Z,Human,Teams,Awaiting Onboarding Review,Checklist in Progress,Onboarding rev 1,,sample:5:3
+Checklist unlocked,Crypto Custody Staking Extension,Checklist,Checklist unlocked,2026-07-10T08:45:08Z,System,System,,,,,sample:5:4
+Package sent to five signatories,Crypto Custody Staking Extension,Signatory,Package sent to five signatories,2026-09-20T18:49:56Z,Human,App,Checklist in Progress,Awaiting Signatory Approval,Package rev 1,,sample:5:5
+Draft created,Green Mortgage Rate Discount,Submission,Draft created,2026-09-16T17:52:20Z,Human,App,,Onboarding Draft,,,sample:6:1
+Onboarding submitted with five signatories,Green Mortgage Rate Discount,Slot,Onboarding submitted with five signatories,2026-09-19T15:28:20Z,Human,App,Onboarding Draft,Awaiting Onboarding Review,Onboarding rev 1,,sample:6:2
+Onboarding approved; slot confirmed,Green Mortgage Rate Discount,Slot,Onboarding approved; slot confirmed,2026-09-22T13:04:20Z,Human,Teams,Awaiting Onboarding Review,Checklist in Progress,Onboarding rev 1,,sample:6:3
+Checklist unlocked,Green Mortgage Rate Discount,Checklist,Checklist unlocked,2026-09-23T02:59:32Z,System,System,,,,,sample:6:4
+Package sent to five signatories,Green Mortgage Rate Discount,Signatory,Package sent to five signatories,2026-10-22T16:54:44Z,Human,App,Checklist in Progress,Awaiting Signatory Approval,Package rev 1,,sample:6:5
+All five signatories approved,Green Mortgage Rate Discount,Signatory,All five signatories approved,2026-11-03T07:18:44Z,System,System,Awaiting Signatory Approval,Ready for Final Submission,Package rev 1,,sample:6:6
+Draft created,Supplier Finance Onboarding Portal,Submission,Draft created,2026-09-03T17:52:20Z,Human,App,,Onboarding Draft,,,sample:7:1
+Onboarding submitted with five signatories,Supplier Finance Onboarding Portal,Slot,Onboarding submitted with five signatories,2026-09-07T07:04:20Z,Human,App,Onboarding Draft,Awaiting Onboarding Review,Onboarding rev 1,,sample:7:2
+Onboarding approved; slot confirmed,Supplier Finance Onboarding Portal,Slot,Onboarding approved; slot confirmed,2026-09-10T20:16:20Z,Human,Teams,Awaiting Onboarding Review,Checklist in Progress,Onboarding rev 1,,sample:7:3
+Checklist unlocked,Supplier Finance Onboarding Portal,Checklist,Checklist unlocked,2026-09-11T13:18:44Z,System,System,,,,,sample:7:4
+Package sent to five signatories,Supplier Finance Onboarding Portal,Signatory,Package sent to five signatories,2026-10-17T18:21:08Z,Human,App,Checklist in Progress,Awaiting Signatory Approval,Package rev 1,,sample:7:5
+All five signatories approved,Supplier Finance Onboarding Portal,Signatory,All five signatories approved,2026-10-31T23:09:08Z,System,System,Awaiting Signatory Approval,Ready for Final Submission,Package rev 1,,sample:7:6
+Final submission made,Supplier Finance Onboarding Portal,Final submission,Final submission made,2026-11-05T05:23:32Z,Human,App,Ready for Final Submission,Awaiting Final Admin Review,Package rev 1,,sample:7:7
+Draft created,Private Credit Feeder Fund,Submission,Draft created,2026-08-03T17:52:20Z,Human,App,,Onboarding Draft,,,sample:8:1
+Onboarding submitted with five signatories,Private Credit Feeder Fund,Slot,Onboarding submitted with five signatories,2026-08-08T20:16:20Z,Human,App,Onboarding Draft,Awaiting Onboarding Review,Onboarding rev 1,,sample:8:2
+Onboarding approved; slot confirmed,Private Credit Feeder Fund,Slot,Onboarding approved; slot confirmed,2026-08-13T22:40:20Z,Human,Teams,Awaiting Onboarding Review,Checklist in Progress,Onboarding rev 1,,sample:8:3
+Checklist unlocked,Private Credit Feeder Fund,Checklist,Checklist unlocked,2026-08-14T23:09:08Z,System,System,,,,,sample:8:4
+Package sent to five signatories,Private Credit Feeder Fund,Signatory,Package sent to five signatories,2026-10-05T23:37:56Z,Human,App,Checklist in Progress,Awaiting Signatory Approval,Package rev 1,,sample:8:5
+All five signatories approved,Private Credit Feeder Fund,Signatory,All five signatories approved,2026-10-26T09:13:56Z,System,System,Awaiting Signatory Approval,Ready for Final Submission,Package rev 1,,sample:8:6
+Final submission made,Private Credit Feeder Fund,Final submission,Final submission made,2026-11-01T12:06:44Z,Human,App,Ready for Final Submission,Awaiting Final Admin Review,Package rev 1,,sample:8:7
+Meeting canceled; slot needs reassignment,Private Credit Feeder Fund,Slot,Meeting canceled; slot needs reassignment,2026-11-10T16:25:56Z,Human,App,,,,Committee quorum not available.,sample:8:8
+Draft created,Real-Time FX Rate Lock,Submission,Draft created,2026-04-13T17:52:20Z,Human,App,,Onboarding Draft,,,sample:9:1
+Onboarding submitted with five signatories,Real-Time FX Rate Lock,Slot,Onboarding submitted with five signatories,2026-04-24T10:40:20Z,Human,App,Onboarding Draft,Awaiting Onboarding Review,Onboarding rev 1,,sample:9:2
+Onboarding approved; slot confirmed,Real-Time FX Rate Lock,Slot,Onboarding approved; slot confirmed,2026-05-05T03:28:20Z,Human,Teams,Awaiting Onboarding Review,Checklist in Progress,Onboarding rev 1,,sample:9:3
+Checklist unlocked,Real-Time FX Rate Lock,Checklist,Checklist unlocked,2026-05-07T06:49:56Z,System,System,,,,,sample:9:4
+Package sent to five signatories,Real-Time FX Rate Lock,Signatory,Package sent to five signatories,2026-08-24T10:11:32Z,Human,App,Checklist in Progress,Awaiting Signatory Approval,Package rev 1,,sample:9:5
+All five signatories approved,Real-Time FX Rate Lock,Signatory,All five signatories approved,2026-10-06T05:23:32Z,System,System,Awaiting Signatory Approval,Ready for Final Submission,Package rev 1,,sample:9:6
+Final submission made,Real-Time FX Rate Lock,Final submission,Final submission made,2026-10-19T01:33:08Z,Human,App,Ready for Final Submission,Awaiting Final Admin Review,Package rev 1,,sample:9:7
+Committee attendance authorized,Real-Time FX Rate Lock,Admission,Committee attendance authorized,2026-11-05T04:25:56Z,Human,Teams,Awaiting Final Admin Review,Authorized for Committee,Package rev 1,,sample:9:8

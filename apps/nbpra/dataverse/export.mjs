@@ -4,7 +4,11 @@
 // switches arrive off (their definitions default to false), sets the version,
 // and publishes. The source environment keeps its own values.
 //
-//   node export.mjs --url https://<org>.crm.dynamics.com --out <file.zip> [--version 1.0.0.0] [--managed]
+// --without-code-app leaves the code app out, for a target environment where
+// code apps are not enabled: the admin app, data model, server operations and
+// roles do not depend on it. The code app is put back in the solution afterwards.
+//
+//   node export.mjs --url https://<org>.crm.dynamics.com --out <file.zip> [--version 1.0.0.0] [--managed] [--without-code-app]
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -46,7 +50,29 @@ for (const s of ["nbpra_AllowSelfApproval", "nbpra_AllowDuplicateSignatories"]) 
     console.log(`  ${s}: value "${v.value}" ${inSolution ? "taken out of the solution for the export" : "is not in the solution"}`);
   }
 }
+// Code apps are solution component type 300.
+const CODE_APP = 300;
+const heldBack = [];
+if (args.includes("--without-code-app")) {
+  console.log("Code app");
+  const apps = (await api("GET", `solutioncomponents?$select=objectid&$filter=_solutionid_value eq ${sol.solutionid} and componenttype eq ${CODE_APP}`)).value;
+  for (const a of apps) {
+    await api("POST", "RemoveSolutionComponent", {
+      SolutionComponent: { "@odata.type": "Microsoft.Dynamics.CRM.solutioncomponent", solutioncomponentid: a.objectid },
+      ComponentType: CODE_APP,
+      SolutionUniqueName: NAME,
+    });
+    heldBack.push(a.objectid);
+    console.log(`  held back from this export: ${a.objectid}`);
+  }
+  if (!apps.length) console.log("  none in the solution");
+}
+
 async function putBack() {
+  for (const id of heldBack.splice(0)) {
+    await api("POST", "AddSolutionComponent", { ComponentId: id, ComponentType: CODE_APP, SolutionUniqueName: NAME, AddRequiredComponents: false });
+    console.log(`  code app ${id} is back in the solution`);
+  }
   for (const r of restore.splice(0)) {
     await api("POST", "environmentvariablevalues", { value: r.value, "EnvironmentVariableDefinitionId@odata.bind": `/environmentvariabledefinitions(${r.definition})` });
     console.log(`  ${r.name}: value "${r.value}" restored in this environment`);
