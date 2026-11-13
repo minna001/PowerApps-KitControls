@@ -317,6 +317,11 @@ async function main() {
         if (have === want) continue;
         const full = await api("GET", `${e}/Attributes(LogicalName='${P}_${c[0]}')`);
         full.DisplayName = label(want);
+        // 64-bit bounds do not survive a JSON round trip, and the platform fixes them anyway.
+        if (String(full["@odata.type"]).endsWith("BigIntAttributeMetadata")) {
+          delete full.MinValue;
+          delete full.MaxValue;
+        }
         await api("PUT", `${e}/Attributes(LogicalName='${P}_${c[0]}')`, full, { mergeLabels: true });
         relabelled++;
       }
