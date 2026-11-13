@@ -3,6 +3,16 @@
 The solution zip is produced by `dataverse/export.mjs` from the development
 environment. It is unmanaged and arrives with both test switches off.
 
+## Two zips
+
+- `NBPRA_Admin_1_0_0_0.zip` is everything except the code app: data model, the NBPRA
+  Admin model-driven app, server operations, roles. Use it where code apps are not
+  enabled yet. Skip the "Enable code apps" requirement and the code app sharing step
+  below.
+- `NBPRA_1_0_0_0.zip` is the same plus the NBPRA code app. Importing it later on top of
+  the admin-only one adds the code app and changes nothing else. Regenerate it with
+  `export.mjs` first so it carries the current column labels.
+
 ## What the target environment needs first
 
 - A Dataverse database.
@@ -39,6 +49,34 @@ environment. It is unmanaged and arrives with both test switches off.
      validation rule, for example `xlsx,xls`.
    - Review routes: for each section, one route per review team, marked active.
      A section with no route cannot be submitted.
+
+## Sample data from spreadsheets
+
+`sample-data/` holds thirteen CSV files of invented records, written by
+`dataverse/sample-csv.mjs` (re-run it to refresh the dates, so the meetings are in the
+future). Import them **in number order**, because later files refer to rows in earlier
+ones by name:
+
+1. In the NBPRA Admin app, open the table the file is named after (for example
+   Committee calendar → Committees for `01 Committee.csv`).
+2. On the command bar choose **Import from Excel** → **Import from CSV**, pick the file,
+   and choose **Review mapping**.
+3. Check every column shows as mapped, then **Finish import**. Imports run in the
+   background; wait for one to complete before starting the next. Progress and any
+   row errors are under Advanced settings → Data management → Imports.
+
+Things to know:
+
+- Tables without their own navigation entry (Slot Request, Section Instance, Signatory
+  Assignment, Approval Request, Business Event) are under Portfolio and Audit.
+- People are blank. Set a business owner on a submission, and a person on each signatory
+  seat, by hand if you want them shown.
+- If date columns are rejected, the import expects your regional date format: open the
+  CSV in Excel, format the date columns to match, and save.
+- Do not import a file twice; it would create duplicates.
+- To review a sample onboarding request, open a submission with status Awaiting
+  Onboarding Review and use the decision buttons. Two sample requests ask for the same
+  slot, so approving the second is refused as full.
 
 ## What is different from the development environment
 
