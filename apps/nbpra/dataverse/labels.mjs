@@ -5,7 +5,7 @@
 // built-in Status (active/inactive) column that every table has.
 
 const WORDS = [
-  "applicability", "idempotency", "cancellation", "instructions", "correlation", "eligibility", "replacement", "integration", "description",
+  "applicability", "idempotency", "directory", "proposed", "rating", "risk", "cancellation", "instructions", "correlation", "eligibility", "replacement", "integration", "description",
   "submission", "committee", "authorized", "signatory", "assignment", "allocation", "validation", "completion", "applicable", "supersedes", "recipient",
   "delegated", "generated", "delivered", "published", "effective", "requested", "requires", "required", "reference", "checklist", "submitted", "withdrawn",
   "business", "instance", "proposal", "template", "activity", "deadline", "location", "capacity", "snapshot", "decision", "approval", "evidence", "question", "approved",
