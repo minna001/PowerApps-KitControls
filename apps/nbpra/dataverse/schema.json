@@ -37,6 +37,14 @@
       ["adminteam", "lookup:team", true, "Authorized scheduling group"]
     ], "keys": [["code"]] },
 
+    { "name": "riskrating", "display": "Risk Rating", "ownership": "organization", "columns": [
+      ["code", "text:20", true, "Stable reference"],
+      ["level", "int", true, "1 is lowest; orders the list"],
+      ["criteria", "memo", false, "What qualifies a proposal for this rating"],
+      ["reviewtiming", "text:200", false, "When the post-implementation review falls due; reserved, no rule reads it yet"],
+      ["isactive", "bool", true, "Offered when choosing a rating"]
+    ], "keys": [["code"]] },
+
     { "name": "meeting", "display": "Committee Meeting", "ownership": "organization", "columns": [
       ["committee", "lookup:committee", true, ""],
       ["startat", "datetime", true, ""],
@@ -86,7 +94,9 @@
       ["copiedfrom", "lookup:submission", false, "Earlier submission this one was started from; content only, never approvals"],
       ["adminnote", "memo", false, "Latest update from the administrator to the submitter, such as when to join the meeting"],
       ["adminnoteat", "datetime", false, ""],
-      ["adminnoteby", "lookup:systemuser", false, ""]
+      ["adminnoteby", "lookup:systemuser", false, ""],
+      ["proposedriskrating", "lookup:riskrating", false, "Rating the submitter proposes at onboarding"],
+      ["finalriskrating", "lookup:riskrating", false, "Rating the committee assigns; reserved, no rule reads it yet"]
     ], "keys": [["reference"]] },
 
     { "name": "slotrequest", "display": "Slot Request", "ownership": "user", "columns": [

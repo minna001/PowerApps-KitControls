@@ -42,6 +42,9 @@ function write(order, tableName, columns, rows) {
   console.log(`${file}: ${rows.length} rows`);
 }
 
+// ---- risk ratings: names only; the criteria are entered by the administrator ----
+write("00", "riskrating", ["name", "code", "level", "isactive"], [["Low", "LOW", 1, "Yes"], ["Medium", "MED", 2, "Yes"], ["High", "HIGH", 3, "Yes"]]);
+
 // ---- calendar -----------------------------------------------------------------
 const COMMITTEE = "New Business and Product Risk Committee";
 write("01", "committee", ["name", "code", "description", "defaulttimezone", "isactive"], [[COMMITTEE, "NBPRC", "Sample committee.", "Eastern Standard Time", "Yes"]]);

@@ -58,6 +58,7 @@ const RELATED = {
   ],
   approvalrequest: [["Decisions", "approvaldecision", "approvalrequest", "All decisions"]],
   committee: [["Meetings", "meeting", "committee", "Upcoming meetings"]],
+  riskrating: [["Proposed on", "submission", "proposedriskrating", "All submissions"]],
   meeting: [["Slots", "slot", "meeting", "All slots"]],
   template: [["Sections", "sectiondef", "template", "Sections by template"]],
   sectiondef: [

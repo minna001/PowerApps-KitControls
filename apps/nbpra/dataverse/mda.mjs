@@ -55,6 +55,7 @@ const VIEWS = [
   ["questiondef", "Questions by section", [["sectiondef", 200], ["displayorder", 70], ["code", 110], ["label", 380], ["answertype", 110], ["isrequired", 80], ["requiresevidence", 100]], "", ["displayorder", false]],
   ["reviewroute", "Review routes", [["sectiondef", 220], ["reviewteam", 170], ["routecode", 100], ["completionpolicy", 190], ["isactive", 80]], "", ["createdon", false]],
   ["template", "Checklist templates", [["name", 220], ["code", 110], ["version", 70], ["status", 110], ["publishedat", 150], ["effectivefrom", 150]], "", ["createdon", true]],
+  ["riskrating", "Risk ratings", [["level", 70], ["name", 200], ["code", 100], ["reviewtiming", 320], ["isactive", 80]], "", ["level", false]],
   ["committee", "Committees", [["name", 240], ["code", 100], ["defaulttimezone", 170], ["isactive", 80], ["adminteam", 170]], "", ["createdon", false]],
 ];
 
@@ -86,7 +87,7 @@ const NAV = [
   ["Portfolio", [["submission", "Submissions"], ["approvalrequest", "Approval requests"], ["slotrequest", "Slot requests"], ["signatory", "Signatories"], ["sectioninstance", "Section status"], ["evidence", "Evidence"]]],
   ["Committee calendar", [["committee", "Committees"], ["meeting", "Meetings"], ["slot", "Slots"]]],
   ["Audit", [["businessevent", "Business timeline"], ["approvaldecision", "Decisions"], ["communication", "Notifications"], ["exportpackage", "Export history"]]],
-  ["Configuration", [["template", "Checklist templates"], ["sectiondef", "Sections"], ["questiondef", "Questions"], ["questionoption", "Question options"], ["reviewroute", "Review routes"]]],
+  ["Configuration", [["template", "Checklist templates"], ["sectiondef", "Sections"], ["questiondef", "Questions"], ["questionoption", "Question options"], ["reviewroute", "Review routes"], ["riskrating", "Risk ratings"]]],
 ];
 
 function siteMapXml(withWorkspace) {

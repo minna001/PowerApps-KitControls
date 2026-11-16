@@ -52,7 +52,7 @@ environment. It is unmanaged and arrives with both test switches off.
 
 ## Sample data from spreadsheets
 
-`sample-data/` holds thirteen CSV files of invented records, written by
+`sample-data/` holds fourteen CSV files of invented records, written by
 `dataverse/sample-csv.mjs` (re-run it to refresh the dates, so the meetings are in the
 future). Import them **in number order**, because later files refer to rows in earlier
 ones by name:

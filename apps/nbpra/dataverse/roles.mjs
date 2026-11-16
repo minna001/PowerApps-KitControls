@@ -25,7 +25,7 @@ if (!args.includes("--url") || !urlArg) {
 }
 const { api } = connect(urlArg, schema.solution);
 const P = schema.publisherPrefix;
-const CONFIG = ["committee", "meeting", "slot", "template", "sectiondef", "questiondef", "questionoption", "reviewroute"];
+const CONFIG = ["committee", "meeting", "slot", "template", "sectiondef", "questiondef", "questionoption", "reviewroute", "riskrating"];
 
 const privileges = (await api("GET", `privileges?$select=name,privilegeid&$filter=contains(name,'${P}_')`)).value;
 const find = (verb, table) => {
