@@ -57,6 +57,7 @@ const ORIGIN = "http://nbpra.test"; // never resolved; every request is intercep
     await scope.getByPlaceholder("Search by name or email").fill(directoryTerm);
     await scope.locator(".people-list button").first().click({ timeout: T });
   };
+  const PLACE = 'a.btn:has-text("Request a place")';
   let failed = 0;
   const step = async (name, fn) => {
     try {
@@ -99,11 +100,11 @@ const ORIGIN = "http://nbpra.test"; // never resolved; every request is intercep
   });
   await step("calendar", async () => {
     await p.click('a:has-text("Start a new submission")');
-    await p.waitForSelector(".slot.open", { timeout: T });
+    await p.waitForSelector(PLACE, { timeout: T });
     await shot("02-calendar");
   });
-  await step("pick a slot", async () => {
-    await p.locator(".slot.open").last().click();
+  await step("request a place at a meeting", async () => {
+    await p.locator(PLACE).last().click();
     await p.waitForSelector("text=Initial onboarding");
     await p.waitForSelector(".form-grid .next-title", { timeout: T });
   });
@@ -271,11 +272,13 @@ const ORIGIN = "http://nbpra.test"; // never resolved; every request is intercep
     if ((await p.getByLabel("Brief business description").inputValue()) === "") throw new Error("description was not copied");
     await shot("17-copy-onboarding");
   });
-  await step("copy: choose a slot, submit, approve", async () => {
-    await p.click('a:has-text("Choose a slot from the calendar")');
-    await p.waitForSelector(".slot.open", { timeout: T });
-    await p.locator(".slot.open").last().click();
+  await step("copy: choose a meeting and sponsor, submit, approve", async () => {
+    await p.click('a:has-text("Choose a meeting from the calendar")');
+    await p.waitForSelector(PLACE, { timeout: T });
+    await p.locator(PLACE).first().click();
     await p.waitForSelector(".form-grid .next-title", { timeout: T });
+    await pickPerson(p);
+    await p.waitForSelector(".person-chip", { timeout: T });
     await p.getByRole("button", { name: "Submit request" }).click();
     await p.waitForSelector('.ws-badges :text("Awaiting Onboarding Review")', { timeout: T });
     await p.getByRole("button", { name: "Approve and unlock checklist" }).click();
@@ -294,7 +297,7 @@ const ORIGIN = "http://nbpra.test"; // never resolved; every request is intercep
   await step("phone-width calendar has no sideways scroll", async () => {
     await p.setViewportSize({ width: 420, height: 800 });
     await p.goto(U + "#/calendar");
-    await p.waitForSelector(".slot", { timeout: T });
+    await p.waitForSelector(".meetings", { timeout: T });
     if (await p.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw new Error("page overflows");
   });
   console.log(log.join("\n"));
