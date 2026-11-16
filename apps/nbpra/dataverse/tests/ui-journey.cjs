@@ -227,14 +227,16 @@ const ORIGIN = "http://nbpra.test"; // never resolved; every request is intercep
     if ((await p.locator('.sig-seat :text("Pending")').count()) !== 6) throw new Error("expected six pending signatories");
     await shot("11-awaiting-signatories");
   });
-  await step("six signatory approvals", async () => {
-    await p.goto(U + "#/approvals");
-    await p.waitForSelector(".task-row", { timeout: T });
-    for (let i = 0; i < 6; i++) {
-      await mine().first().getByRole("button", { name: "Approve", exact: true }).click();
-      await p.waitForSelector(".notice.good", { timeout: T });
-      await p.waitForTimeout(1200);
+  // The person found in the directory need not be the signed-in user, so the answers are
+  // recorded the administrator's way. A signatory answering for themselves is covered by
+  // the server journey test.
+  await step("six signatory approvals recorded", async () => {
+    const record = p.getByRole("button", { name: "Record approval", exact: true });
+    for (let left = await record.count(); left > 0; left--) {
+      await record.first().click();
+      await p.waitForFunction((n) => [...document.querySelectorAll(".sig-actions button")].filter((b) => b.textContent === "Record approval").length === n, left - 1, { timeout: T });
     }
+    await p.waitForSelector('.ws-badges :text("Ready for Final Submission")', { timeout: T });
     await shot("12-signatories-done");
   });
   await step("final submission", async () => {
