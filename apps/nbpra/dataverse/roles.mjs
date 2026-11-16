@@ -39,6 +39,7 @@ const manage = CONFIG.flatMap((t) => ["Create", "Write", "Append", "AppendTo"].m
 const bu = (await api("GET", "businessunits?$select=businessunitid&$filter=_parentbusinessunitid_value eq null")).value[0].businessunitid;
 for (const [name, description, set] of [
   ["NBPRA User", "Read access to NBPRA records for submitters, reviewers and signatories.", read],
+  ["NBPRA Automation", "For the account whose connection runs the NBPRA approval flow: lets it report a signatory's response.", read],
   ["NBPRA Administrator", "NBPRA administrator: decides onboarding and committee admission, and maintains the calendar and checklist.", [...read, ...manage]],
 ]) {
   let id = (await api("GET", `roles?$select=roleid&$filter=name eq '${name}' and _businessunitid_value eq ${bu}`)).value[0]?.roleid;

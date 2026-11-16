@@ -7,7 +7,8 @@ import { buildMemo } from "../memo";
 import { saveToDisk } from "../files";
 import { formatDateTime } from "../components/ui";
 import { Checklist } from "../components/Checklist";
-import { SignatoryPicker } from "../components/SignatoryPicker";
+import { SignatoryPanel } from "../components/SignatoryPicker";
+import { SIGNATORY_SEATS } from "../data/types";
 import { MeetingUpdates } from "../components/MeetingUpdates";
 import { Notice } from "../components/ui";
 import { Button } from "@fluentui/react-components";
@@ -53,7 +54,6 @@ export function Workspace({ source, user, id, initialTab }: { source: DataSource
 
   const phase = currentPhase(s);
   const isOwner = s.ownerId === user.userId || source.isSample;
-  const allApproved = s.sections.length > 0 && s.sections.every((x) => x.status === "Approved" || x.status === "Not Applicable");
   const checklistOpen = s.status === "Checklist in Progress" || s.status === "Final Changes Requested";
 
   async function run(op: () => Promise<OpResult>) {
@@ -91,7 +91,7 @@ export function Workspace({ source, user, id, initialTab }: { source: DataSource
     if (s.status === "Onboarding Draft" || s.status === "Onboarding Denied")
       ownerAction = { label: s.status === "Onboarding Denied" ? "Revise onboarding" : "Continue onboarding", hint: "Complete the intake details and submit the request.", go: () => (window.location.hash = `#/onboarding/${s.id}`) };
     else if (checklistOpen) ownerAction = { label: "Open the checklist", hint: "Answer each section and submit it for functional review.", go: () => setTab("Checklist") };
-    else if (s.status === "Ready for Final Submission") ownerAction = { label: "Make final submission", hint: "All five signatories approved. Send the package to the NBPRA administrator.", go: () => run(() => source.finalSubmit(s.id)) };
+    else if (s.status === "Ready for Final Submission") ownerAction = { label: "Make final submission", hint: "Every section and all six signatories are approved. Send the package to the NBPRA administrator.", go: () => run(() => source.finalSubmit(s.id)) };
   }
   const applicable = s.sections.filter((x) => x.status !== "Not Applicable");
   const approvedSections = applicable.filter((x) => x.status === "Approved").length;
@@ -151,7 +151,7 @@ export function Workspace({ source, user, id, initialTab }: { source: DataSource
               <div className="stats">
                 <Stat big={`${approvedSections} / ${applicable.length}`} label="Sections approved" />
                 <Stat big={`${s.functionalApproved} / ${s.functionalRequired}`} label="Functional group approvals" />
-                <Stat big={`${s.signatoriesApproved} / 5`} label="Signatory approvals" />
+                <Stat big={`${s.signatoriesApproved} / ${SIGNATORY_SEATS}`} label="Signatory approvals" />
               </div>
 
               {s.blockers.length > 0 && (
@@ -220,16 +220,6 @@ export function Workspace({ source, user, id, initialTab }: { source: DataSource
         </section>
 
         <aside className="ws-side">
-          {isOwner && checklistOpen && allApproved && !source.isSample && (
-            <SignatoryPicker
-              source={source}
-              submissionId={s.id}
-              onResult={(r) => {
-                setResult(r);
-                if (r.ok) load();
-              }}
-            />
-          )}
           {user.isAdmin && (
             <AdminDecision
               source={source}
@@ -263,28 +253,20 @@ export function Workspace({ source, user, id, initialTab }: { source: DataSource
                   </Button>
                 </>
               )}
-              {s.status === "Awaiting Signatory Approval" && (
-                <p className="muted decision-hint">
-                  Signatories approve from <a href="#/approvals">My approvals</a>.
-                </p>
-              )}
             </div>
           </div>
 
-          <div className="panel">
-            <div className="panel-head">
-              Five signatories <span className="mono">{s.signatoriesApproved} of 5</span>
-            </div>
-            {s.signatories.filter((p) => p.name !== "(unassigned)").length === 0 && <div className="sig-row muted">Named once every section is approved.</div>}
-            {s.signatories
-              .filter((p) => p.name !== "(unassigned)")
-              .map((p) => (
-              <div key={p.slot} className="sig-row">
-                <span>{p.name}</span>
-                <DecisionPill state={p.state} />
-              </div>
-            ))}
-          </div>
+          <SignatoryPanel
+            source={source}
+            submissionId={s.id}
+            signatories={s.signatories}
+            canEdit={isOwner && !source.isSample && (checklistOpen || s.status === "Ready for Final Submission")}
+            canRecord={user.isAdmin && !source.isSample}
+            onResult={(r) => {
+              setResult(r as typeof result);
+              if (r.ok) load();
+            }}
+          />
 
           <div className="panel">
             <div className="panel-head">Committee memo</div>

@@ -65,13 +65,13 @@ export async function buildMemo(source: DataSource, user: UserContext, submissio
       },
       layout: "lightHorizontalLines",
     },
-    { text: `Five signatories: ${detail.signatoriesApproved} of 5 approved`, style: "h3" },
-    detail.signatories.length
+    { text: `Signatories: ${detail.signatoriesApproved} of 6 approved`, style: "h3" },
+    detail.signatories.some((p) => p.name)
       ? {
-          table: { headerRows: 1, widths: [50, "*", 120], body: [[th("Seat"), th("Signatory"), th("Decision")], ...detail.signatories.map((p) => [String(p.slot), p.name, p.state])] },
+          table: { headerRows: 1, widths: [150, "*", 90], body: [[th("Signing for"), th("Signatory"), th("Decision")], ...detail.signatories.filter((p) => p.name).map((p) => [p.role || `Signatory ${p.slot}`, p.name, p.state === "Not requested" ? "Not yet asked" : p.state])] },
           layout: "lightHorizontalLines",
         }
-      : { text: "Not yet named. The business owner names the five signatories once every checklist section is approved.", style: "muted" },
+      : { text: "Not yet named. The sponsor is named at onboarding; the business owner chooses the other five as each area completes.", style: "muted" },
 
     { text: "Checklist responses", style: "h2", pageBreak: "before" },
     ...sections.flatMap((s) =>

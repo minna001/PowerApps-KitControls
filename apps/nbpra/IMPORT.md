@@ -39,7 +39,14 @@ environment. It is unmanaged and arrives with both test switches off.
    with all users, and **NBPRA Admin** with Kate.
 3. **Review groups.** Create one owner team per functional group (Legal, Tax, …)
    and add its members. (Admin centre → the environment → Settings → Teams.)
-4. **Configuration**, in the NBPRA Admin app:
+4. **Signatory approval flow.** In make.powerautomate.com → Solutions → NBPRA → Cloud
+   flows, open **NBPRA signatory approval**. Sign in its two connections (Dataverse and
+   Approvals) if the import did not ask for them, then turn the flow on. Give the
+   account behind the Dataverse connection the **NBPRA Automation** role, unless it is
+   already an NBPRA Administrator. Until the flow is on, "Send for approval" marks a
+   signatory as asked but nothing is sent; Kate can record an answer on their behalf
+   from the submission in the NBPRA app.
+5. **Configuration**, in the NBPRA Admin app:
    - Committee calendar → Committees, then Meetings, then Slots. A meeting must have
      status Open and a request window that includes today for its slots to be
      requestable; each slot needs status Open and a capacity.
@@ -69,9 +76,9 @@ Things to know:
 
 - Tables without their own navigation entry (Slot Request, Section Instance, Signatory
   Assignment, Approval Request, Business Event) are under Portfolio and Audit.
-- People are blank. Set a business owner on a submission, and a person on each signatory
-  seat, by hand if you want them shown. Only submissions that have reached signatory
-  approval have seats, because signatories are named at that point.
+- Business owners are blank; set one on a submission by hand if you want it shown.
+  Signatories are invented names at example.com. Do not use "Send for approval" on a
+  sample submission while the flow is on, or it will try to email them.
 - If date columns are rejected, the import expects your regional date format: open the
   CSV in Excel, format the date columns to match, and save.
 - Do not import a file twice; it would create duplicates.
@@ -82,14 +89,15 @@ Things to know:
 ## What is different from the development environment
 
 - A person cannot decide or review their own submission.
-- The five signatories must be five different people.
+- The six signatories must be six different people, and none of them the business owner.
 - There is no sample data. Nothing appears until the configuration above exists.
 
 A full run-through therefore needs at least six accounts: a submitter, Kate, and
-enough people to fill five signatory seats and the review teams.
+six signatories, plus members for the review teams. The signatories only need a
+mailbox; they answer from the approval email and do not need access to the app.
 
 ## Not in this version
 
-Notifications and Teams or email approvals, withdrawing a submission, reopening an
+Notifications other than the signatory approval request, withdrawing a submission, reopening an
 approved section, record-level security (every NBPRA user can read every
 submission), and files larger than 5 MB.

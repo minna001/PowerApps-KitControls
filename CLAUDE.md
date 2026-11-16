@@ -91,7 +91,12 @@ owner's licence there is Power Apps for Office 365, not Premium.
   `provision.mjs` (tables; `--verify` is read-only), `mda.mjs` (model-driven app, views,
   site map), `forms.mjs`, `seed.mjs` (sample data, runs once), `register.mjs` (plug-in and
   custom API; build `plugin/` first), `commands.mjs` (command-bar buttons), `webapp.mjs`
-  (React app as a web resource; run `npm run build:webresource` in `codeapp/` first).
+  (React app as a web resource; run `npm run build:webresource` in `codeapp/` first),
+  `roles.mjs` (security roles), `flows.mjs` (signatory approval cloud flow, created off:
+  its Dataverse and Approvals connections have to be signed in by hand in Power Automate).
+- Signatories are directory people stored by name and email, not Dataverse users. Seat 1
+  is the sponsor from onboarding; the submitter picks seats 2 to 6. `sendSignatory` sets a
+  seat to Pending, the flow sends the approval, and `decideSignatory` records the answer.
 - Run the scripts with `NODE_USE_ENV_PROXY=1` in cloud sessions, or Node's fetch bypasses
   the proxy. Set `DV_TOKEN_FILE` to a path outside the repo to reuse one device-code
   sign-in for an hour.

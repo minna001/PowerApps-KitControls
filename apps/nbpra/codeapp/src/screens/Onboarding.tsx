@@ -1,17 +1,17 @@
 import { useEffect, useState } from "react";
 import { Button, Field, Input, Select, Textarea } from "@fluentui/react-components";
 import type { DataSource } from "../data/source";
-import type { Intake, MeetingInfo, OpResult, Person, UserContext } from "../data/types";
+import type { Intake, MeetingInfo, OpResult, UserContext } from "../data/types";
+import { PeoplePicker } from "../components/PeoplePicker";
 import { Notice, PageHead, formatDateTime, formatTime, zone } from "../components/ui";
 
 const AREAS = ["Commercial Banking", "Global Markets", "Payments", "Retail Banking", "Wealth"];
 const TYPES = ["New business", "New product", "Product extension", "Material change"];
-const BLANK: Intake = { title: "", businessArea: "", proposalType: "", summary: "", scope: "", sponsorId: "", slotId: "", signatories: ["", "", "", "", ""] };
+const BLANK: Intake = { title: "", businessArea: "", proposalType: "", summary: "", scope: "", sponsor: null, slotId: "" };
 
-/** Initial onboarding: intake details and the requested meeting. The five signatories are named later, once the checklist is approved. */
+/** Initial onboarding: intake details, the business unit sponsor and the requested meeting. The other five signatories are chosen later. */
 export function Onboarding({ source, user, id, pickedSlot }: { source: DataSource; user: UserContext; id?: string; pickedSlot?: string }) {
   const [intake, setIntake] = useState<Intake>();
-  const [people, setPeople] = useState<Person[]>([]);
   const [meetings, setMeetings] = useState<MeetingInfo[]>([]);
   const [result, setResult] = useState<OpResult<unknown>>();
   const [busy, setBusy] = useState(false);
@@ -20,7 +20,6 @@ export function Onboarding({ source, user, id, pickedSlot }: { source: DataSourc
   const [sid, setSid] = useState(id);
 
   useEffect(() => {
-    source.listPeople().then(setPeople);
     source.listMeetings().then(setMeetings);
     (id ? source.getIntake(id) : Promise.resolve(BLANK)).then((i) => {
       setIntake(pickedSlot ? { ...i, slotId: pickedSlot } : i);
@@ -142,15 +141,8 @@ export function Onboarding({ source, user, id, pickedSlot }: { source: DataSourc
               <Field label="Business owner">
                 <Input value={user.fullName} readOnly />
               </Field>
-              <Field label="Business sponsor or contact">
-                <Select value={intake.sponsorId} onChange={(_, d) => set("sponsorId", d.value)}>
-                  <option value="">Select…</option>
-                  {people.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </Select>
+              <Field label="Business unit sponsor" required hint="Senior vice president or above. They approve the package at the end, with the other signatories.">
+                <PeoplePicker source={source} value={intake.sponsor} onChange={(p) => set("sponsor", p)} />
               </Field>
             </div>
           </div>

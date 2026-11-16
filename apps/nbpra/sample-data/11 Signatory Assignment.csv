@@ -1,26 +1,35 @@
-﻿Name,Submission,Slot number,Assignment version,Is current,Assigned at
-Crypto Custody Staking Extension · signatory 1,Crypto Custody Staking Extension,1,1,Yes,2026-09-22T07:41:47Z
-Crypto Custody Staking Extension · signatory 2,Crypto Custody Staking Extension,2,1,Yes,2026-09-22T07:41:47Z
-Crypto Custody Staking Extension · signatory 3,Crypto Custody Staking Extension,3,1,Yes,2026-09-22T07:41:47Z
-Crypto Custody Staking Extension · signatory 4,Crypto Custody Staking Extension,4,1,Yes,2026-09-22T07:41:47Z
-Crypto Custody Staking Extension · signatory 5,Crypto Custody Staking Extension,5,1,Yes,2026-09-22T07:41:47Z
-Green Mortgage Rate Discount · signatory 1,Green Mortgage Rate Discount,1,1,Yes,2026-10-25T01:56:11Z
-Green Mortgage Rate Discount · signatory 2,Green Mortgage Rate Discount,2,1,Yes,2026-10-25T01:56:11Z
-Green Mortgage Rate Discount · signatory 3,Green Mortgage Rate Discount,3,1,Yes,2026-10-25T01:56:11Z
-Green Mortgage Rate Discount · signatory 4,Green Mortgage Rate Discount,4,1,Yes,2026-10-25T01:56:11Z
-Green Mortgage Rate Discount · signatory 5,Green Mortgage Rate Discount,5,1,Yes,2026-10-25T01:56:11Z
-Supplier Finance Onboarding Portal · signatory 1,Supplier Finance Onboarding Portal,1,1,Yes,2026-10-20T00:15:23Z
-Supplier Finance Onboarding Portal · signatory 2,Supplier Finance Onboarding Portal,2,1,Yes,2026-10-20T00:15:23Z
-Supplier Finance Onboarding Portal · signatory 3,Supplier Finance Onboarding Portal,3,1,Yes,2026-10-20T00:15:23Z
-Supplier Finance Onboarding Portal · signatory 4,Supplier Finance Onboarding Portal,4,1,Yes,2026-10-20T00:15:23Z
-Supplier Finance Onboarding Portal · signatory 5,Supplier Finance Onboarding Portal,5,1,Yes,2026-10-20T00:15:23Z
-Private Credit Feeder Fund · signatory 1,Private Credit Feeder Fund,1,1,Yes,2026-10-07T22:05:47Z
-Private Credit Feeder Fund · signatory 2,Private Credit Feeder Fund,2,1,Yes,2026-10-07T22:05:47Z
-Private Credit Feeder Fund · signatory 3,Private Credit Feeder Fund,3,1,Yes,2026-10-07T22:05:47Z
-Private Credit Feeder Fund · signatory 4,Private Credit Feeder Fund,4,1,Yes,2026-10-07T22:05:47Z
-Private Credit Feeder Fund · signatory 5,Private Credit Feeder Fund,5,1,Yes,2026-10-07T22:05:47Z
-Real-Time FX Rate Lock · signatory 1,Real-Time FX Rate Lock,1,1,Yes,2026-08-25T05:46:35Z
-Real-Time FX Rate Lock · signatory 2,Real-Time FX Rate Lock,2,1,Yes,2026-08-25T05:46:35Z
-Real-Time FX Rate Lock · signatory 3,Real-Time FX Rate Lock,3,1,Yes,2026-08-25T05:46:35Z
-Real-Time FX Rate Lock · signatory 4,Real-Time FX Rate Lock,4,1,Yes,2026-08-25T05:46:35Z
-Real-Time FX Rate Lock · signatory 5,Real-Time FX Rate Lock,5,1,Yes,2026-08-25T05:46:35Z
+﻿Name,Submission,Slot number,Role,Display name,Email,Signatory Assignment status,Assignment version,Is current,Assigned at,Requested at,Decided at
+Jane Smith · Business unit sponsor,Corporate Card Virtual Issuance,1,Business unit sponsor,Jane Smith,jane.smith@example.com,Not sent,1,Yes,2026-11-08T04:09:51Z,,
+Jane Smith · Business unit sponsor,Carbon Credit Custody,1,Business unit sponsor,Jane Smith,jane.smith@example.com,Not sent,1,Yes,2026-11-13T20:57:51Z,,
+Jane Smith · Business unit sponsor,Instant Payee Verification,1,Business unit sponsor,Jane Smith,jane.smith@example.com,Not sent,1,Yes,2026-11-05T07:45:51Z,,
+Jane Smith · Business unit sponsor,SME Overdraft Repricing,1,Business unit sponsor,Jane Smith,jane.smith@example.com,Not sent,1,Yes,2026-10-18T06:33:51Z,,
+Jane Smith · Business unit sponsor,Crypto Custody Staking Extension,1,Business unit sponsor,Jane Smith,jane.smith@example.com,Approved,1,Yes,2026-07-04T19:45:51Z,2026-09-22T08:14:39Z,2026-10-05T02:57:51Z
+Tom Baker · Business risk,Crypto Custody Staking Extension,2,Business risk,Tom Baker,tom.baker@example.com,Approved,1,Yes,2026-09-06T17:21:51Z,2026-09-22T08:14:39Z,2026-10-05T02:57:51Z
+Sarah Jenkins · Enterprise risk,Crypto Custody Staking Extension,3,Enterprise risk,Sarah Jenkins,sarah.jenkins@example.com,Approved,1,Yes,2026-09-06T17:21:51Z,2026-09-22T08:14:39Z,2026-10-05T02:57:51Z
+Mark Davies · Compliance,Crypto Custody Staking Extension,4,Compliance,Mark Davies,mark.davies@example.com,Pending,1,Yes,2026-09-06T17:21:51Z,2026-09-22T08:14:39Z,
+Lisa Wong · Legal,Crypto Custody Staking Extension,5,Legal,Lisa Wong,lisa.wong@example.com,Pending,1,Yes,2026-09-06T17:21:51Z,2026-09-22T08:14:39Z,
+Omar Haddad · Finance,Crypto Custody Staking Extension,6,Finance,Omar Haddad,omar.haddad@example.com,Pending,1,Yes,2026-09-06T17:21:51Z,2026-09-22T08:14:39Z,
+Jane Smith · Business unit sponsor,Green Mortgage Rate Discount,1,Business unit sponsor,Jane Smith,jane.smith@example.com,Approved,1,Yes,2026-09-22T14:57:51Z,2026-10-25T02:29:03Z,2026-10-30T07:45:51Z
+Tom Baker · Business risk,Green Mortgage Rate Discount,2,Business risk,Tom Baker,tom.baker@example.com,Approved,1,Yes,2026-10-18T17:21:51Z,2026-10-25T02:29:03Z,2026-10-30T07:45:51Z
+Sarah Jenkins · Enterprise risk,Green Mortgage Rate Discount,3,Enterprise risk,Sarah Jenkins,sarah.jenkins@example.com,Approved,1,Yes,2026-10-18T17:21:51Z,2026-10-25T02:29:03Z,2026-10-30T07:45:51Z
+Mark Davies · Compliance,Green Mortgage Rate Discount,4,Compliance,Mark Davies,mark.davies@example.com,Approved,1,Yes,2026-10-18T17:21:51Z,2026-10-25T02:29:03Z,2026-10-30T07:45:51Z
+Lisa Wong · Legal,Green Mortgage Rate Discount,5,Legal,Lisa Wong,lisa.wong@example.com,Approved,1,Yes,2026-10-18T17:21:51Z,2026-10-25T02:29:03Z,2026-10-30T07:45:51Z
+Omar Haddad · Finance,Green Mortgage Rate Discount,6,Finance,Omar Haddad,omar.haddad@example.com,Approved,1,Yes,2026-10-18T17:21:51Z,2026-10-25T02:29:03Z,2026-10-30T07:45:51Z
+Jane Smith · Business unit sponsor,Supplier Finance Onboarding Portal,1,Business unit sponsor,Jane Smith,jane.smith@example.com,Approved,1,Yes,2026-09-10T06:33:51Z,2026-10-20T00:48:15Z,2026-10-26T10:09:51Z
+Tom Baker · Business risk,Supplier Finance Onboarding Portal,2,Business risk,Tom Baker,tom.baker@example.com,Approved,1,Yes,2026-10-12T05:21:51Z,2026-10-20T00:48:15Z,2026-10-26T10:09:51Z
+Sarah Jenkins · Enterprise risk,Supplier Finance Onboarding Portal,3,Enterprise risk,Sarah Jenkins,sarah.jenkins@example.com,Approved,1,Yes,2026-10-12T05:21:51Z,2026-10-20T00:48:15Z,2026-10-26T10:09:51Z
+Mark Davies · Compliance,Supplier Finance Onboarding Portal,4,Compliance,Mark Davies,mark.davies@example.com,Approved,1,Yes,2026-10-12T05:21:51Z,2026-10-20T00:48:15Z,2026-10-26T10:09:51Z
+Lisa Wong · Legal,Supplier Finance Onboarding Portal,5,Legal,Lisa Wong,lisa.wong@example.com,Approved,1,Yes,2026-10-12T05:21:51Z,2026-10-20T00:48:15Z,2026-10-26T10:09:51Z
+Omar Haddad · Finance,Supplier Finance Onboarding Portal,6,Finance,Omar Haddad,omar.haddad@example.com,Approved,1,Yes,2026-10-12T05:21:51Z,2026-10-20T00:48:15Z,2026-10-26T10:09:51Z
+Jane Smith · Business unit sponsor,Private Credit Feeder Fund,1,Business unit sponsor,Jane Smith,jane.smith@example.com,Approved,1,Yes,2026-08-11T19:45:51Z,2026-10-07T22:38:39Z,2026-10-17T02:57:51Z
+Tom Baker · Business risk,Private Credit Feeder Fund,2,Business risk,Tom Baker,tom.baker@example.com,Approved,1,Yes,2026-09-26T17:21:51Z,2026-10-07T22:38:39Z,2026-10-17T02:57:51Z
+Sarah Jenkins · Enterprise risk,Private Credit Feeder Fund,3,Enterprise risk,Sarah Jenkins,sarah.jenkins@example.com,Approved,1,Yes,2026-09-26T17:21:51Z,2026-10-07T22:38:39Z,2026-10-17T02:57:51Z
+Mark Davies · Compliance,Private Credit Feeder Fund,4,Compliance,Mark Davies,mark.davies@example.com,Approved,1,Yes,2026-09-26T17:21:51Z,2026-10-07T22:38:39Z,2026-10-17T02:57:51Z
+Lisa Wong · Legal,Private Credit Feeder Fund,5,Legal,Lisa Wong,lisa.wong@example.com,Approved,1,Yes,2026-09-26T17:21:51Z,2026-10-07T22:38:39Z,2026-10-17T02:57:51Z
+Omar Haddad · Finance,Private Credit Feeder Fund,6,Finance,Omar Haddad,omar.haddad@example.com,Approved,1,Yes,2026-09-26T17:21:51Z,2026-10-07T22:38:39Z,2026-10-17T02:57:51Z
+Jane Smith · Business unit sponsor,Real-Time FX Rate Lock,1,Business unit sponsor,Jane Smith,jane.smith@example.com,Approved,1,Yes,2026-04-27T10:09:51Z,2026-08-25T06:19:27Z,2026-09-13T12:33:51Z
+Tom Baker · Business risk,Real-Time FX Rate Lock,2,Business risk,Tom Baker,tom.baker@example.com,Approved,1,Yes,2026-08-01T17:21:51Z,2026-08-25T06:19:27Z,2026-09-13T12:33:51Z
+Sarah Jenkins · Enterprise risk,Real-Time FX Rate Lock,3,Enterprise risk,Sarah Jenkins,sarah.jenkins@example.com,Approved,1,Yes,2026-08-01T17:21:51Z,2026-08-25T06:19:27Z,2026-09-13T12:33:51Z
+Mark Davies · Compliance,Real-Time FX Rate Lock,4,Compliance,Mark Davies,mark.davies@example.com,Approved,1,Yes,2026-08-01T17:21:51Z,2026-08-25T06:19:27Z,2026-09-13T12:33:51Z
+Lisa Wong · Legal,Real-Time FX Rate Lock,5,Legal,Lisa Wong,lisa.wong@example.com,Approved,1,Yes,2026-08-01T17:21:51Z,2026-08-25T06:19:27Z,2026-09-13T12:33:51Z
+Omar Haddad · Finance,Real-Time FX Rate Lock,6,Finance,Omar Haddad,omar.haddad@example.com,Approved,1,Yes,2026-08-01T17:21:51Z,2026-08-25T06:19:27Z,2026-09-13T12:33:51Z

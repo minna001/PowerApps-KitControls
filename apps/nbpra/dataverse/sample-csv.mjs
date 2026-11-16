@@ -42,6 +42,8 @@ function write(order, tableName, columns, rows) {
   console.log(`${file}: ${rows.length} rows`);
 }
 
+const SIGNATORIES = [["Jane Smith", "Business unit sponsor"], ["Tom Baker", "Business risk"], ["Sarah Jenkins", "Enterprise risk"], ["Mark Davies", "Compliance"], ["Lisa Wong", "Legal"], ["Omar Haddad", "Finance"]];
+
 // ---- risk ratings: names only; the criteria are entered by the administrator ----
 write("00", "riskrating", ["name", "code", "level", "isactive"], [["Low", "LOW", 1, "Yes"], ["Medium", "MED", 2, "Yes"], ["High", "HIGH", 3, "Yes"]]);
 
@@ -158,8 +160,13 @@ SUBS.forEach((s, i) => {
   let n = 0;
   const event = (f, type2, action, o = {}) => eventRows.push([action, title, type2, action, at(f), o.system ? "System" : "Human", o.channel ?? (o.system ? "System" : "App"), o.from ?? "", o.to ?? "", o.rev ?? "", o.reason ?? "", `sample:${i}:${++n}`]);
   event(0, "Submission", "Draft created", { to: "Onboarding Draft" });
-  // Signatories are named when the package is sent to them, so earlier stages have none.
-  if (r >= 3) for (let seat = 1; seat <= 5; seat++) seatRows.push([`${title} · signatory ${seat}`, title, seat, 1, "Yes", at(0.61)]);
+  // The sponsor is named at onboarding; the other five are chosen once the checklist is under way.
+  const seats = r >= 3 ? 6 : r >= 1 ? 1 : 0;
+  for (let seat = 1; seat <= seats; seat++) {
+    const [person, role] = SIGNATORIES[seat - 1];
+    const st = r >= 4 ? "Approved" : r === 3 ? (seat <= 3 ? "Approved" : "Pending") : "Not sent";
+    seatRows.push([`${person} · ${role}`, title, seat, role, person, `${person.toLowerCase().replace(" ", ".")}@example.com`, st, 1, "Yes", at(seat === 1 ? 0.05 : 0.5), st === "Not sent" ? "" : at(0.61), st === "Approved" ? at(0.7) : ""]);
+  }
 
   if (r >= 1 && slot) {
     const st = status === "Onboarding Denied" ? "Denied" : status === "Awaiting Onboarding Review" ? "Pending" : "Approved";
@@ -174,8 +181,8 @@ SUBS.forEach((s, i) => {
     }
   }
   if (unlocked) SECTIONS.forEach(([, name], k) => sectionRows.push([`${title} · ${name}`, title, name, k < approved ? "Approved" : k === approved ? "Draft" : "Not Started", "Yes"]));
-  if (r >= 3) event(0.62, "Signatory", "Package sent to five signatories", { from: "Checklist in Progress", to: "Awaiting Signatory Approval", rev: "Package rev 1" });
-  if (r >= 4) event(0.82, "Signatory", "All five signatories approved", { system: true, from: "Awaiting Signatory Approval", to: "Ready for Final Submission", rev: "Package rev 1" });
+  if (r >= 3) event(0.62, "Signatory", "Approval requested from the signatories", { from: "Checklist in Progress", to: "Awaiting Signatory Approval", rev: "Package rev 1" });
+  if (r >= 4) event(0.82, "Signatory", "Every section and all six signatories approved", { system: true, from: "Awaiting Signatory Approval", to: "Ready for Final Submission", rev: "Package rev 1" });
   if (r >= 5) {
     event(0.88, "Final submission", "Final submission made", { from: "Ready for Final Submission", to: "Awaiting Final Admin Review", rev: "Package rev 1" });
     approvalRows.push([`Committee admission: ${title}`, title, "Final Committee Admission", "One authorized", status === "Authorized for Committee" ? "Approved" : "Pending", 1, "", `sample:${i}:final`, status === "Authorized for Committee" ? at(0.96) : ""]);
@@ -186,6 +193,6 @@ SUBS.forEach((s, i) => {
 write("08", "submission", ["name", "title", "businessarea", "proposaltype", "summary", "scope", "status", "packagerevision", "checklisttemplate", "assignedslot", "lastbusinessactivityat", "finalsubmittedat", "committeeauthorizedat"], subRows);
 write("09", "slotrequest", ["name", "submission", "revisionnumber", "status", "requestedslot", "assignedslot", "submittedat", "allocationactive"], requestRows);
 write("10", "sectioninstance", ["name", "submission", "sectiondef", "status", "isapplicable"], sectionRows);
-write("11", "signatory", ["name", "submission", "slotnumber", "assignmentversion", "iscurrent", "assignedat"], seatRows);
+write("11", "signatory", ["name", "submission", "slotnumber", "role", "displayname", "email", "status", "assignmentversion", "iscurrent", "assignedat", "requestedat", "decidedat"], seatRows);
 write("12", "approvalrequest", ["name", "submission", "purpose", "policy", "status", "packagerevision", "slotrequest", "idempotencykey", "closedat"], approvalRows);
 write("13", "businessevent", ["name", "submission", "eventtype", "action", "occurredat", "actorkind", "channel", "oldstatus", "newstatus", "summary", "reason", "eventkey"], eventRows);

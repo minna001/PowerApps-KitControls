@@ -51,6 +51,12 @@ const ORIGIN = "http://nbpra.test"; // never resolved; every request is intercep
     await p.waitForTimeout(700);
     await p.screenshot({ path: `${out}/${n}.png` });
   };
+  // Start of the signed-in user's email address: the one person every environment's directory has.
+  let directoryTerm = "";
+  const pickPerson = async (scope) => {
+    await scope.getByPlaceholder("Search by name or email").fill(directoryTerm);
+    await scope.locator(".people-list button").first().click({ timeout: T });
+  };
   let failed = 0;
   const step = async (name, fn) => {
     try {
@@ -112,7 +118,15 @@ const ORIGIN = "http://nbpra.test"; // never resolved; every request is intercep
     await p.getByLabel("Proposal classification").selectOption("New product");
     await p.getByLabel("Brief business description").fill("Created by the browser journey test.");
     await p.getByLabel("Indicative jurisdictions and scope").fill("United States");
-    if (await p.getByLabel(/^Signatory 1/).count()) throw new Error("onboarding still asks for signatories");
+    // The sponsor is the one signatory named up front, picked from the directory.
+    const me = await p.evaluate(async () => {
+      const r = await fetch("/api/data/v9.2/nbpra_Workflow", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ Operation: "context" }) });
+      return JSON.parse((await r.json()).Data);
+    });
+    if (!me.email) throw new Error("the signed-in user has no email address to search the directory for");
+    directoryTerm = me.email.slice(0, Math.max(3, me.email.indexOf("@")));
+    await pickPerson(p);
+    await p.waitForSelector(".person-chip", { timeout: T });
     await shot("03-onboarding");
   });
   await step("submit onboarding", async () => {
@@ -188,24 +202,34 @@ const ORIGIN = "http://nbpra.test"; // never resolved; every request is intercep
     await p.getByRole("button", { name: "Approve section" }).click();
     await p.waitForSelector(".notice.good", { timeout: T });
   });
-  await step("request signatory approval", async () => {
+  await step("choose five signatories from the directory", async () => {
     await p.goto(subUrl);
-    await p.waitForSelector(".rail", { timeout: T });
-    // The five names are entered here, at the end, not at onboarding.
-    await p.waitForSelector("text=Name the five signatories", { timeout: T });
-    await shot("10b-name-signatories");
-    for (let i = 1; i <= 5; i++) {
-      await p.waitForFunction((n) => document.querySelectorAll(".decision select")[n - 1]?.options.length > 1, i, { timeout: T });
-      await p.getByLabel(new RegExp("^Signatory " + i)).selectOption({ index: 1 });
+    await p.waitForSelector(".sig-seat", { timeout: T });
+    const roles = ["Business risk", "Enterprise risk", "Compliance", "Legal", "Finance"];
+    for (const role of roles) {
+      await p.getByRole("button", { name: "Choose", exact: true }).first().click();
+      const form = p.locator(".sig-edit");
+      await form.getByLabel("Signing for").fill(role);
+      await pickPerson(form);
+      await form.getByRole("button", { name: "Save", exact: true }).click();
+      await p.waitForSelector(".sig-edit", { state: "detached", timeout: T });
+      await p.waitForSelector(`.sig-role:text-is("${role}")`, { timeout: T });
     }
-    await p.getByRole("button", { name: "Send to the five signatories" }).click();
-    await p.waitForSelector('.ws-badges :text("Awaiting Signatory Approval")', { timeout: T });
+    await shot("10b-signatories-chosen");
+  });
+  await step("ask all six for approval", async () => {
+    const send = p.getByRole("button", { name: "Send for approval", exact: true });
+    for (let left = await send.count(); left > 0; left--) {
+      await send.first().click();
+      await p.waitForFunction((n) => [...document.querySelectorAll(".sig-actions button")].filter((b) => b.textContent === "Send for approval").length === n, left - 1, { timeout: T });
+    }
+    if ((await p.locator('.sig-seat :text("Pending")').count()) !== 6) throw new Error("expected six pending signatories");
     await shot("11-awaiting-signatories");
   });
-  await step("five signatory approvals", async () => {
+  await step("six signatory approvals", async () => {
     await p.goto(U + "#/approvals");
     await p.waitForSelector(".task-row", { timeout: T });
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 6; i++) {
       await mine().first().getByRole("button", { name: "Approve", exact: true }).click();
       await p.waitForSelector(".notice.good", { timeout: T });
       await p.waitForTimeout(1200);

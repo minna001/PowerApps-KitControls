@@ -26,7 +26,8 @@
     "commchannel": ["Email", "In-app", "Teams"],
     "commstate": ["Pending", "Sent", "Failed", "Retried"],
     "exporttype": ["Draft", "Submitted", "Committee-authorized"],
-    "exportstatus": ["Pending", "Generated", "Failed"]
+    "exportstatus": ["Pending", "Generated", "Failed"],
+    "signatorystatus": ["Not sent", "Pending", "Approved", "Returned", "Replaced"]
   },
   "tables": [
     { "name": "committee", "display": "Committee", "ownership": "organization", "columns": [
@@ -268,8 +269,17 @@
 
     { "name": "signatory", "display": "Signatory Assignment", "ownership": "user", "columns": [
       ["submission", "lookup:submission", true, ""],
-      ["slotnumber", "int", true, "1 to 5"],
-      ["person", "lookup:systemuser", false, "Required at onboarding submit"],
+      ["slotnumber", "int", true, "1 is the business unit sponsor named at onboarding; 2 to 6 are chosen by the submitter"],
+      ["person", "lookup:systemuser", false, "Not used; signatories are directory people who need not be app users"],
+      ["displayname", "text:200", false, "Person's name from the company directory"],
+      ["email", "text:320", false, "Where the approval request is sent"],
+      ["directoryid", "text:100", false, "Directory object id of the person"],
+      ["role", "text:200", false, "What the person signs for, as the submitter describes it"],
+      ["status", "choice:signatorystatus", true, "Written only by server operations"],
+      ["requestedat", "datetime", false, "When the approval request was last sent"],
+      ["decidedat", "datetime", false, ""],
+      ["decisioncomment", "memo", false, "Comment the signatory gave with the decision"],
+      ["decisionchannel", "choice:channel", false, "How the decision arrived"],
       ["assignmentversion", "int", true, ""],
       ["iscurrent", "bool", true, ""],
       ["assignedat", "datetime", false, ""],

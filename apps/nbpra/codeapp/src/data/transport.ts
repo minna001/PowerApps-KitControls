@@ -20,4 +20,6 @@ export interface Transport {
   query(entitySet: string, options?: QueryOptions): Promise<Row[]>;
   workflow(operation: string, targetId?: string, outcome?: string, comment?: string, payload?: string): Promise<OperationReply>;
   adminDecision(submissionId: string, action: string, comment: string): Promise<OperationReply>;
+  /** Up to ten directory people whose name or email starts with the term. */
+  searchPeople(term: string): Promise<{ id: string; name: string; email: string; jobTitle?: string }[]>;
 }

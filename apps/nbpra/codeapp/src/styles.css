@@ -250,3 +250,22 @@ a.nav-item:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px;
 .update-meta { font-size: 12.5px; margin-top: 4px; }
 .update-post { display: grid; gap: 8px; justify-items: start; }
 .update-post .fui-Field { width: 100%; }
+
+/* Directory people picker and the signatory panel */
+.people-picker { position: relative; display: grid; gap: 4px; }
+.people-list { list-style: none; margin: 0; padding: 4px; border: 1px solid var(--line); border-radius: 6px; background: #fff; max-height: 240px; overflow: auto; }
+.people-list li.muted { padding: 8px 10px; font-size: 13px; }
+.people-list button { display: grid; width: 100%; text-align: left; gap: 1px; padding: 7px 10px; border: 0; border-radius: 4px; background: none; cursor: pointer; font: inherit; color: inherit; }
+.people-list button:hover, .people-list button:focus-visible { background: #e4eeec; }
+.person-chip { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+.person-name { font-weight: 600; overflow-wrap: anywhere; }
+.person-mail { font-size: 12.5px; overflow-wrap: anywhere; }
+.link-button { border: 0; background: none; padding: 0; color: var(--teal, #0f6b63); cursor: pointer; font: inherit; text-decoration: underline; }
+.sig-seat { border-bottom: 1px solid var(--line-soft); }
+.sig-seat:last-child { border-bottom: 0; }
+.sig-seat .sig-row { border-bottom: 0; align-items: flex-start; gap: 10px; }
+.sig-role { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted, #5b6b69); }
+.sig-hint { font-size: 13px; }
+.sig-note { padding: 0 14px 8px; font-size: 12.5px; }
+.sig-actions { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 14px 10px; }
+.sig-edit { padding: 12px 14px; border-bottom: 1px solid var(--line-soft); background: #f6faf9; }

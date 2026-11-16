@@ -13,7 +13,7 @@ const ATTENTION: { key: Attention; label: string; test: (s: Submission) => boole
   { key: "blocked", label: "Blocked", test: (s) => !!s.blocker },
   { key: "kate", label: "Waiting on the administrator", test: (s) => s.nextActor === "Kate" },
   { key: "functional", label: "Functional approvals outstanding", test: (s) => s.nextActor === "Functional approvers" },
-  { key: "signatories", label: "Signatory approvals outstanding", test: (s) => s.status === "Awaiting Signatory Approval" },
+  { key: "signatories", label: "Signatory approvals outstanding", test: (s) => s.status === "Checklist in Progress" && s.functionalRequired > 0 && s.functionalApproved === s.functionalRequired },
   { key: "aged", label: "Open longer than 90 days", test: (s) => s.ageDays > 90 && s.status !== "Authorized for Committee" && !CLOSED.includes(s.status) },
 ];
 
@@ -153,7 +153,7 @@ export function Portfolio({ source, user, mode }: { source: DataSource; user: Us
                     <td className="nowrap">
                       {s.functionalRequired ? `Func ${s.functionalApproved}/${s.functionalRequired}` : "Func not started"}
                       <br />
-                      Sig {s.signatoriesApproved}/5
+                      Sig {s.signatoriesApproved}/6
                     </td>
                     <td>
                       {s.nextAction}

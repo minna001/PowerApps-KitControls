@@ -39,7 +39,28 @@ function reply(r: Result<Row>): OperationReply {
   return { Outcome: String(r.data?.Outcome ?? "error"), Message: String(r.data?.Message ?? ""), Data: r.data?.Data as string | undefined };
 }
 
+interface DirectoryUser {
+  Id?: string;
+  DisplayName?: string;
+  Mail?: string;
+  UserPrincipalName?: string;
+  JobTitle?: string;
+}
+// Present once the Office 365 Users connector has been added to the app
+// (pa app add-data-source); until then people are looked up among app users.
+const office365Users = (gen as unknown as { Office365UsersService?: { SearchUserV2(searchTerm?: string, top?: number): Promise<Result<{ value?: DirectoryUser[] }>> } }).Office365UsersService;
+
 export const sdkTransport: Transport = {
+  async searchPeople(term) {
+    if (office365Users) {
+      const r = await office365Users.SearchUserV2(term, 10);
+      if (!r.success) throw new Error(r.error?.message ?? "The directory search failed.");
+      return (r.data?.value ?? []).map((u) => ({ id: u.Id ?? "", name: u.DisplayName ?? u.Mail ?? "", email: u.Mail ?? u.UserPrincipalName ?? "", jobTitle: u.JobTitle || undefined })).filter((u) => u.email);
+    }
+    const q = term.replace(/'/g, "''");
+    const users = await this.query("systemusers", { select: ["systemuserid", "azureactivedirectoryobjectid", "fullname", "internalemailaddress", "title"], filter: `isdisabled eq false and accessmode eq 0 and (contains(fullname,'${q}') or startswith(internalemailaddress,'${q}'))` });
+    return users.slice(0, 10).map((u) => ({ id: u.azureactivedirectoryobjectid ?? u.systemuserid, name: u.fullname, email: u.internalemailaddress ?? "", jobTitle: u.title ?? undefined })).filter((u) => u.email);
+  },
   async query(entitySet, o: QueryOptions = {}) {
     const service = SERVICES[entitySet];
     if (!service) throw new Error(`${entitySet} is not connected to this app.`);

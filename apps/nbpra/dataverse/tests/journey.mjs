@@ -52,8 +52,8 @@ if (!secondSlot) throw new Error("Needs two free slots in an open meeting; run s
 const title = `Journey test ${new Date().toISOString().slice(0, 16)}`;
 const id = expect("create draft", await wf("saveOnboarding", "", { Payload: JSON.stringify({ title }) }), "accepted").Data;
 expect("submit incomplete onboarding", await wf("submitOnboarding", id), "validation_failed");
-const intake = { title, businessArea: "Payments", proposalType: "New product", summary: "Automated journey test.", scope: "United States", sponsorId: me.userId, slotId: slot.nbpra_slotid };
-const five = JSON.stringify({ signatories: Array(5).fill(me.userId) });
+const intake = { title, businessArea: "Payments", proposalType: "New product", summary: "Automated journey test.", scope: "United States", sponsor: { name: me.fullName, email: me.email }, slotId: slot.nbpra_slotid };
+if (!me.email) throw new Error("The signed-in user has no email address, so cannot stand in as a signatory.");
 expect("save full onboarding", await wf("saveOnboarding", id, { Payload: JSON.stringify(intake) }), "accepted");
 expect("save checklist before approval", await wf("saveSection", "00000000-0000-0000-0000-000000000001", { Payload: "[]" }), "validation_failed");
 expect("submit onboarding", await wf("submitOnboarding", id), "accepted");
@@ -106,7 +106,6 @@ if (evidenceId) {
   console.log("FAIL no evidence questions found; run seed-checklist.mjs");
 }
 expect("edit a section under review", await wf("saveSection", first.nbpra_sectioninstanceid, { Payload: "[]" }), "validation_failed");
-expect("request signatories too early", await wf("requestSignatories", id, { Payload: five }), "validation_failed");
 
 const pending = async () => (await api("GET", `nbpra_approvalrequests?$select=nbpra_name,_nbpra_sectionrevision_value&$filter=_nbpra_submission_value eq ${id} and nbpra_purpose eq ${B + 1} and nbpra_status eq ${B}`)).value;
 let reviews = await pending();
@@ -124,16 +123,36 @@ for (const r of reviews) {
 }
 console.log(`ok   approved ${reviews.length} functional reviews`);
 
-const seatsBefore = (await api("GET", `nbpra_signatories?$select=nbpra_slotnumber&$filter=_nbpra_submission_value eq ${id}`)).value.length;
-console.log(`${seatsBefore === 0 ? "ok  " : (failures++, "FAIL")} no signatories exist until the end of the process (${seatsBefore})`);
-expect("send the package without naming signatories", await wf("requestSignatories", id), "validation_failed");
-expect("send the package naming only four", await wf("requestSignatories", id, { Payload: JSON.stringify({ signatories: Array(4).fill(me.userId) }) }), "validation_failed");
-expect("name five signatories and send the package", await wf("requestSignatories", id, { Payload: five }), "accepted");
+// Signatories: the sponsor from onboarding plus five picked from the directory, each asked on their own.
+const seatRows = async () => (await api("GET", `nbpra_signatories?$select=nbpra_slotnumber,nbpra_status,nbpra_displayname&$filter=_nbpra_submission_value eq ${id} and nbpra_iscurrent eq true&$orderby=nbpra_slotnumber asc`)).value;
+let seats = await seatRows();
+console.log(`${seats.length === 1 && seats[0].nbpra_slotnumber === 1 ? "ok  " : (failures++, "FAIL")} only the sponsor is named before the submitter picks the rest (${seats.length})`);
 expect("final submit before signatories", await wf("finalSubmit", id), "validation_failed");
-const seats = (await api("GET", `nbpra_approvalassignments?$select=nbpra_name&$filter=nbpra_status eq ${B} and _nbpra_signatoryassignment_value ne null&$expand=nbpra_approvalrequest($select=_nbpra_submission_value)`)).value.filter((a) => a.nbpra_approvalrequest?._nbpra_submission_value === id);
-for (const [i, a] of seats.entries()) {
-  const d = await wf("decideSignatory", a.nbpra_approvalassignmentid, { Outcome: "approve" });
-  if (i === 3) console.log(`     after four approvals: ${await statusOf(id)} — ${d.Message}`);
+const pick = (seat, role, email = me.email) => wf("setSignatory", id, { Payload: JSON.stringify({ seat, role, name: me.fullName, email }) });
+expect("seat outside one to six", await pick(7, "Legal"), "validation_failed");
+expect("person without an email address", await pick(2, "Legal", "nobody"), "validation_failed");
+for (const [i, role] of ["Business risk", "Enterprise risk", "Compliance", "Legal", "Finance"].entries()) {
+  const r = await pick(i + 2, role);
+  if (r.Outcome !== "accepted") expect(`choose signatory for ${role}`, r, "accepted");
+}
+seats = await seatRows();
+console.log(`${seats.length === 6 ? "ok  " : (failures++, "FAIL")} six signatories named (${seats.length})`);
+expect("record an answer before asking", await wf("decideSignatory", seats[1].nbpra_signatoryid, { Outcome: "approve" }), "validation_failed");
+for (const s of seats) {
+  const r = await wf("sendSignatory", s.nbpra_signatoryid);
+  if (r.Outcome !== "accepted") expect(`ask signatory ${s.nbpra_slotnumber}`, r, "accepted");
+}
+expect("ask the same signatory twice", await wf("sendSignatory", seats[0].nbpra_signatoryid), "already_resolved");
+// What the approval flow sends back: the outcome plus who responded.
+const viaFlow = (s, Outcome, responder, Comment = "") => wf("decideSignatory", s.nbpra_signatoryid, { Outcome, Comment, Payload: JSON.stringify({ responder }) });
+expect("response from someone other than the signatory", await viaFlow(seats[1], "approve", "someone.else@example.com"), "unauthorized");
+expect("return without a reason", await viaFlow(seats[1], "return", me.email), "validation_failed");
+expect("signatory returns the package", await viaFlow(seats[1], "return", me.email, "Numbers need updating."), "accepted");
+expect("answer the same request again", await viaFlow(seats[1], "approve", me.email), "already_resolved");
+expect("ask the returning signatory again", await wf("sendSignatory", seats[1].nbpra_signatoryid), "accepted");
+for (const [i, s] of seats.entries()) {
+  const d = i % 2 ? await viaFlow(s, "approve", me.email.toUpperCase()) : await wf("decideSignatory", s.nbpra_signatoryid, { Outcome: "approve" });
+  if (i === 4) console.log(`     after five approvals: ${await statusOf(id)} — ${d.Message}`);
   if (d.Outcome !== "accepted") expect(`signatory ${i + 1}`, d, "accepted");
 }
 console.log(`ok   ${seats.length} signatory approvals recorded; status ${await statusOf(id)}`);
@@ -151,7 +170,7 @@ console.log(`${back2.Data && JSON.parse(back2.Data).base64 === pdf ? "ok  " : (f
 const copyId = expect("start a new draft from this submission", await wf("copySubmission", id), "accepted").Data;
 const copy = await api("GET", `nbpra_submissions(${copyId})?$select=nbpra_title,nbpra_businessarea,nbpra_summary`);
 console.log(`     copy is "${copy.nbpra_title}" in ${copy.nbpra_businessarea}`);
-const copySeats = (await api("GET", `nbpra_signatories?$select=nbpra_slotnumber&$filter=_nbpra_submission_value eq ${copyId} and _nbpra_person_value ne null`)).value.length;
+const copySeats = (await api("GET", `nbpra_signatories?$select=nbpra_slotnumber&$filter=_nbpra_submission_value eq ${copyId} and nbpra_iscurrent eq true`)).value.length;
 console.log(`${copySeats === 0 ? "ok  " : (failures++, "FAIL")} copy starts with no signatories (${copySeats})`);
 expect("submit the copy without slot or signatories", await wf("submitOnboarding", copyId), "validation_failed");
 expect("complete the copy's onboarding", await wf("saveOnboarding", copyId, { Payload: JSON.stringify({ ...intake, title: copy.nbpra_title, slotId: secondSlot.nbpra_slotid }) }), "accepted");

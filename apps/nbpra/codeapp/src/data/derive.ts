@@ -6,7 +6,7 @@ export const NEXT: Record<SubmissionStatus, [action: string, actor: string]> = {
   "Onboarding Draft": ["Complete and submit onboarding", "Submitter"],
   "Awaiting Onboarding Review": ["Kate to review onboarding request", "Kate"],
   "Onboarding Denied": ["Revise and resubmit onboarding", "Submitter"],
-  "Checklist in Progress": ["Complete checklist sections and obtain functional approvals", "Submitter"],
+  "Checklist in Progress": ["Complete checklist sections and collect signatory approvals", "Submitter"],
   "Awaiting Signatory Approval": ["Signatories to approve the package", "Signatories"],
   "Ready for Final Submission": ["Make final submission", "Submitter"],
   "Awaiting Final Admin Review": ["Kate to review final package", "Kate"],
@@ -16,5 +16,4 @@ export const NEXT: Record<SubmissionStatus, [action: string, actor: string]> = {
   Withdrawn: ["Closed", "None"],
 };
 
-export const SIGNED_OFF: SubmissionStatus[] = ["Ready for Final Submission", "Awaiting Final Admin Review", "Authorized for Committee"];
 export const DONE_SECTION: SectionStatus[] = ["Ready to Submit", "Under Review", "Approved"];

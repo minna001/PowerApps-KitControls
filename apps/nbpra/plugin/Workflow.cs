@@ -25,8 +25,9 @@ namespace Nbpra.Plugins
     ///   saveSection         TargetId = section instance; Payload = [{"q":questionId,"v":value}]
     ///   submitSection       TargetId = section instance
     ///   decideReview        TargetId = approval request; Outcome = approve | changes
-    ///   requestSignatories  TargetId = submission; Payload = {"signatories":[five user ids]}, named at this point
-    ///   decideSignatory     TargetId = approval assignment; Outcome = approve | return
+    ///   setSignatory        TargetId = submission; Payload = {"seat":2-6,"name","email","directoryId","role"} (seat 1 is the sponsor)
+    ///   sendSignatory       TargetId = signatory; marks the request Pending, which starts the approval flow
+    ///   decideSignatory     TargetId = signatory; Outcome = approve | return; Payload = {"responder":email} when a flow reports it
     ///   finalSubmit         TargetId = submission
     ///   uploadEvidence      TargetId = section instance; Payload = {"q","fileName","contentType","base64"} -> Data: evidence id
     ///   downloadEvidence    TargetId = evidence -> Data: {"fileName","contentType","base64"}
@@ -50,13 +51,18 @@ namespace Nbpra.Plugins
             [DataMember(Name = "scope")] public string Scope;
             [DataMember(Name = "sponsorId")] public string SponsorId;
             [DataMember(Name = "slotId")] public string SlotId;
-            [DataMember(Name = "signatories")] public List<string> Signatories;
+            [DataMember(Name = "sponsor")] public PersonIn Sponsor;
         }
 
         [DataContract]
-        private sealed class SignatoriesIn
+        private sealed class PersonIn
         {
-            [DataMember(Name = "signatories")] public List<string> Signatories;
+            [DataMember(Name = "seat")] public int Seat;
+            [DataMember(Name = "name")] public string Name;
+            [DataMember(Name = "email")] public string Email;
+            [DataMember(Name = "directoryId")] public string DirectoryId;
+            [DataMember(Name = "role")] public string Role;
+            [DataMember(Name = "responder")] public string Responder;
         }
 
         [DataContract]
@@ -119,8 +125,9 @@ namespace Nbpra.Plugins
                     case "saveSection": data = SaveSection(Id(target), payload); message = "Section saved."; break;
                     case "submitSection": SubmitSection(Id(target)); message = "Section submitted for functional review."; break;
                     case "decideReview": message = DecideReview(Id(target), outcome, comment); break;
-                    case "requestSignatories": RequestSignatories(Id(target), payload); message = "Package sent to the five signatories."; break;
-                    case "decideSignatory": message = DecideSignatory(Id(target), outcome, comment); break;
+                    case "setSignatory": data = SetSignatory(Id(target), payload).ToString(); message = "Signatory saved."; break;
+                    case "sendSignatory": message = SendSignatory(Id(target)); break;
+                    case "decideSignatory": message = DecideSignatory(Id(target), outcome, comment, payload); break;
                     case "finalSubmit": FinalSubmit(Id(target)); message = "Final submission made. Awaiting the NBPRA administrator."; break;
                     case "uploadEvidence": data = UploadEvidence(Id(target), payload); message = "File uploaded."; break;
                     case "downloadEvidence": data = DownloadFile("nbpra_evidence", Id(target)); break;
@@ -217,7 +224,7 @@ namespace Nbpra.Plugins
         private string Context()
         {
             var u = svc.Retrieve("systemuser", actor, new ColumnSet("fullname"));
-            return "{\"userId\":\"" + actor + "\",\"fullName\":\"" + Js(u.GetAttributeValue<string>("fullname")) + "\",\"isAdmin\":" + (AdminDecision.IsAdmin(svc, actor) ? "true" : "false") + "}";
+            return "{\"userId\":\"" + actor + "\",\"fullName\":\"" + Js(u.GetAttributeValue<string>("fullname")) + "\",\"email\":\"" + Js(ActorEmail()) + "\",\"isAdmin\":" + (AdminDecision.IsAdmin(svc, actor) ? "true" : "false") + "}";
         }
 
         private Guid SaveOnboarding(string target, string payload)
@@ -285,57 +292,81 @@ namespace Nbpra.Plugins
                 svc.Update(sr);
             }
 
-            // Signatories are named at the end of the process, not here. Names sent with an
-            // onboarding save are still stored, so an older client keeps working.
-            if (d.Signatories != null && d.Signatories.Any(x => !string.IsNullOrWhiteSpace(x))) SetSeats(id, d.Signatories);
+            // The business unit sponsor is the one signatory known at this point; the other
+            // five are chosen by the submitter later, when each area's work is done.
+            if (d.Sponsor != null && !string.IsNullOrWhiteSpace(d.Sponsor.Email))
+            {
+                d.Sponsor.Role = SponsorRole;
+                SetSeat(id, 1, d.Sponsor);
+            }
             return id;
         }
 
+        private const string SponsorRole = "Business unit sponsor";
+        private const int Seats = 6;
+
+        private string ActorEmail() => (svc.Retrieve("systemuser", actor, new ColumnSet("internalemailaddress")).GetAttributeValue<string>("internalemailaddress") ?? string.Empty).Trim();
+        private static bool SameEmail(string a, string b) => a != null && b != null && string.Equals(a.Trim(), b.Trim(), StringComparison.OrdinalIgnoreCase);
+
+        private List<Entity> CurrentSeats(Guid submissionId) =>
+            Rows("nbpra_signatory", new ColumnSet("nbpra_slotnumber", "nbpra_displayname", "nbpra_email", "nbpra_role", "nbpra_status", "nbpra_assignmentversion"), ("nbpra_submission", submissionId), ("nbpra_iscurrent", true));
+
         /// <summary>
-        /// Stores the five named signatories. Replacing a person who was already
-        /// named keeps the earlier assignment as history and adds a new version.
+        /// Names the person in one signatory seat. Changing a person who has already been
+        /// asked keeps the earlier row as history and starts a new, unsent one.
         /// </summary>
-        private void SetSeats(Guid submissionId, List<string> wantedIds)
+        private Guid SetSeat(Guid submissionId, int n, PersonIn p)
         {
-            var subRef = new EntityReference("nbpra_submission", submissionId);
-            var seats = Rows("nbpra_signatory", new ColumnSet("nbpra_slotnumber", "nbpra_person", "nbpra_assignmentversion"), ("nbpra_submission", submissionId), ("nbpra_iscurrent", true));
-            for (var n = 1; n <= 5; n++)
+            var email = (p.Email ?? string.Empty).Trim();
+            if (email.IndexOf('@') < 1) throw Invalid("Choose a person with an email address.");
+            var name = string.IsNullOrWhiteSpace(p.Name) ? email : p.Name.Trim();
+            var seats = CurrentSeats(submissionId);
+            if (seats.Any(x => (x.GetAttributeValue<int?>("nbpra_slotnumber") ?? 0) != n && SameEmail(x.GetAttributeValue<string>("nbpra_email"), email)) && !AdminDecision.Flag(svc, "nbpra_AllowDuplicateSignatories"))
+                throw Invalid(name + " is already a signatory on this submission. The six signatories must be six different people.");
+            var owner = svc.Retrieve("nbpra_submission", submissionId, new ColumnSet("nbpra_businessowner")).GetAttributeValue<EntityReference>("nbpra_businessowner");
+            if (owner != null && !AdminDecision.AllowSelfApproval(svc)
+                && SameEmail(svc.Retrieve("systemuser", owner.Id, new ColumnSet("internalemailaddress")).GetAttributeValue<string>("internalemailaddress"), email))
+                throw Invalid("The business owner cannot be a signatory on their own submission.");
+
+            var seat = seats.FirstOrDefault(x => (x.GetAttributeValue<int?>("nbpra_slotnumber") ?? 0) == n);
+            var version = 1;
+            if (seat != null)
             {
-                var wanted = wantedIds != null && wantedIds.Count >= n && Guid.TryParse(wantedIds[n - 1], out var pid) ? new EntityReference("systemuser", pid) : null;
-                var seat = seats.FirstOrDefault(x => (x.GetAttributeValue<int?>("nbpra_slotnumber") ?? 0) == n);
-                var current = seat?.GetAttributeValue<EntityReference>("nbpra_person");
-                if (seat != null && current?.Id == wanted?.Id) continue;
-                var version = 1;
-                if (seat != null && current == null)
+                var samePerson = SameEmail(seat.GetAttributeValue<string>("nbpra_email"), email);
+                if (samePerson || Opt(seat, "nbpra_status") == C.SignatoryStatus.NotSent)
                 {
-                    var fill = new Entity("nbpra_signatory", seat.Id);
-                    fill["nbpra_person"] = wanted;
-                    fill["nbpra_assignedat"] = now;
-                    fill["nbpra_assignedby"] = actorRef;
-                    svc.Update(fill);
-                    continue;
+                    var keep = new Entity("nbpra_signatory", seat.Id);
+                    keep["nbpra_displayname"] = name;
+                    keep["nbpra_email"] = email;
+                    keep["nbpra_directoryid"] = p.DirectoryId;
+                    keep["nbpra_role"] = p.Role;
+                    keep["nbpra_name"] = name + " · " + (string.IsNullOrWhiteSpace(p.Role) ? "Signatory " + n : p.Role);
+                    svc.Update(keep);
+                    return seat.Id;
                 }
-                if (seat != null)
-                {
-                    var old = new Entity("nbpra_signatory", seat.Id);
-                    old["nbpra_iscurrent"] = false;
-                    old["nbpra_replacedat"] = now;
-                    old["nbpra_replacementreason"] = "Replaced by the business owner before signatory approval.";
-                    svc.Update(old);
-                    version = (seat.GetAttributeValue<int?>("nbpra_assignmentversion") ?? 1) + 1;
-                }
-                var s = new Entity("nbpra_signatory");
-                s["nbpra_name"] = "Signatory " + n;
-                s["nbpra_submission"] = subRef;
-                s["nbpra_slotnumber"] = n;
-                s["nbpra_assignmentversion"] = version;
-                s["nbpra_iscurrent"] = true;
-                s["nbpra_person"] = wanted;
-                s["nbpra_assignedat"] = now;
-                s["nbpra_assignedby"] = actorRef;
-                s["ownerid"] = actorRef;
-                svc.Create(s);
+                var old = new Entity("nbpra_signatory", seat.Id);
+                old["nbpra_iscurrent"] = false;
+                old["nbpra_status"] = O(C.SignatoryStatus.Replaced);
+                old["nbpra_replacedat"] = now;
+                old["nbpra_replacementreason"] = "Replaced by the business owner.";
+                svc.Update(old);
+                version = (seat.GetAttributeValue<int?>("nbpra_assignmentversion") ?? 1) + 1;
             }
+            var s = new Entity("nbpra_signatory");
+            s["nbpra_name"] = name + " · " + (string.IsNullOrWhiteSpace(p.Role) ? "Signatory " + n : p.Role);
+            s["nbpra_submission"] = new EntityReference("nbpra_submission", submissionId);
+            s["nbpra_slotnumber"] = n;
+            s["nbpra_assignmentversion"] = version;
+            s["nbpra_iscurrent"] = true;
+            s["nbpra_displayname"] = name;
+            s["nbpra_email"] = email;
+            s["nbpra_directoryid"] = p.DirectoryId;
+            s["nbpra_role"] = p.Role;
+            s["nbpra_status"] = O(C.SignatoryStatus.NotSent);
+            s["nbpra_assignedat"] = now;
+            s["nbpra_assignedby"] = actorRef;
+            s["ownerid"] = owner ?? actorRef;
+            return svc.Create(s);
         }
 
         private void SubmitOnboarding(Guid id)
@@ -355,7 +386,8 @@ namespace Nbpra.Plugins
             var draft = Rows("nbpra_slotrequest", new ColumnSet("nbpra_status", "nbpra_revisionnumber", "nbpra_requestedslot"), ("nbpra_submission", id))
                 .FirstOrDefault(r => Opt(r, "nbpra_status") == C.SlotRequestStatus.Draft);
             var slotRef = draft?.GetAttributeValue<EntityReference>("nbpra_requestedslot");
-            if (slotRef == null) missing.Add("requested committee slot");
+            if (slotRef == null) missing.Add("requested committee meeting");
+            if (!CurrentSeats(id).Any(x => (x.GetAttributeValue<int?>("nbpra_slotnumber") ?? 0) == 1)) missing.Add("business unit sponsor");
 
             if (missing.Count > 0) throw Invalid("Complete these before submitting: " + string.Join(", ", missing) + ".");
 
@@ -623,7 +655,8 @@ namespace Nbpra.Plugins
         {
             var sub = LoadSubmission(submissionId);
             if (sub.GetAttributeValue<EntityReference>("nbpra_businessowner")?.Id == actor || AdminDecision.IsAdmin(svc, actor)) return;
-            if (Rows("nbpra_signatory", new ColumnSet(false), ("nbpra_submission", submissionId), ("nbpra_iscurrent", true), ("nbpra_person", actor)).Count > 0) return;
+            var mine = ActorEmail();
+            if (mine.Length > 0 && CurrentSeats(submissionId).Any(x => SameEmail(x.GetAttributeValue<string>("nbpra_email"), mine))) return;
             foreach (var team in Rows("nbpra_approvalrequest", new ColumnSet("nbpra_reviewteam"), ("nbpra_submission", submissionId)).Select(r => r.GetAttributeValue<EntityReference>("nbpra_reviewteam")).Where(t => t != null).Select(t => t.Id).Distinct())
                 if (InTeam(team)) return;
             throw Denied("You do not have access to this submission's files.");
@@ -827,7 +860,7 @@ namespace Nbpra.Plugins
                     instUp["nbpra_approvedrevision"] = revRef;
                     instUp["nbpra_approvedat"] = now;
                     svc.Update(instUp);
-                    message = name + " is approved.";
+                    message = Gate(sub.Id) ? name + " is approved. Every section and all six signatories are now approved." : name + " is approved.";
                 }
                 else message = "Approval recorded. Other groups still need to review " + name + ".";
             }
@@ -845,117 +878,163 @@ namespace Nbpra.Plugins
             return message;
         }
 
-        private void RequestSignatories(Guid id, string payload)
+        private static bool SignatoryStage(int st) => st == C.SubmissionStatus.ChecklistInProgress || st == C.SubmissionStatus.AwaitingSignatoryApproval
+            || st == C.SubmissionStatus.ReadyForFinalSubmission || st == C.SubmissionStatus.FinalChangesRequested;
+
+        private Guid SetSignatory(Guid id, string payload)
         {
             var sub = LoadSubmission(id);
             RequireOwner(sub);
-            var st = Opt(sub, "nbpra_status");
-            if (st == C.SubmissionStatus.AwaitingSignatoryApproval) throw Resolved("The package is already with the signatories.");
-            if (st != C.SubmissionStatus.ChecklistInProgress && st != C.SubmissionStatus.FinalChangesRequested) throw Invalid("Signatory approval cannot be requested at this stage.");
-
-            var sections = Rows("nbpra_sectioninstance", new ColumnSet("nbpra_status", "nbpra_isapplicable", "nbpra_name"), ("nbpra_submission", id))
-                .Where(s => s.GetAttributeValue<bool?>("nbpra_isapplicable") != false && Opt(s, "nbpra_status") != C.SectionStatus.NotApplicable).ToList();
-            if (sections.Count == 0) throw Invalid("This submission has no checklist sections.");
-            var open = sections.Where(s => Opt(s, "nbpra_status") != C.SectionStatus.Approved).ToList();
-            if (open.Count > 0) throw Invalid(open.Count + " section(s) are not yet approved: " + string.Join(", ", open.Take(4).Select(s => s.GetAttributeValue<string>("nbpra_name"))) + (open.Count > 4 ? "…" : "") + ".");
-
-            // The business owner names the five signatories here, once the checklist work is done.
-            if (!string.IsNullOrWhiteSpace(payload))
-            {
-                var named = Parse<SignatoriesIn>(payload).Signatories ?? new List<string>();
-                if (named.Count(x => Guid.TryParse(x, out _)) < 5) throw Invalid("Name all five signatories before sending the package.");
-                var ids = named.Take(5).Select(x => Guid.Parse(x)).ToList();
-                if (ids.Distinct().Count() < 5 && !AdminDecision.Flag(svc, "nbpra_AllowDuplicateSignatories")) throw Invalid("The five signatories must be five different people.");
-                var active = Rows("systemuser", new ColumnSet("isdisabled"), ("isdisabled", false)).Select(u => u.Id).ToList();
-                if (ids.Any(x => !active.Contains(x))) throw Invalid("One of the signatories is not an active user.");
-                SetSeats(id, named.Take(5).ToList());
-            }
-            var seats = Rows("nbpra_signatory", new ColumnSet("nbpra_person", "nbpra_slotnumber"), ("nbpra_submission", id), ("nbpra_iscurrent", true))
-                .Where(s => s.GetAttributeValue<EntityReference>("nbpra_person") != null).OrderBy(s => s.GetAttributeValue<int?>("nbpra_slotnumber")).ToList();
-            if (seats.Count != 5) throw Invalid("Name all five signatories before sending the package.");
-            if (seats.Select(s => s.GetAttributeValue<EntityReference>("nbpra_person").Id).Distinct().Count() < 5 && !AdminDecision.Flag(svc, "nbpra_AllowDuplicateSignatories"))
-                throw Invalid("The five signatories must be five different people.");
-
-            var subRef = sub.ToEntityReference();
-            var rev = (sub.GetAttributeValue<int?>("nbpra_packagerevision") ?? 0) + 1;
-            var req = new Entity("nbpra_approvalrequest");
-            req["nbpra_name"] = "Signatory package rev " + rev + ": " + sub.GetAttributeValue<string>("nbpra_name");
-            req["nbpra_submission"] = subRef;
-            req["nbpra_purpose"] = O(C.ApprovalPurpose.SignatoryPackage);
-            req["nbpra_policy"] = O(C.ApprovalPolicy.AllFiveNamed);
-            req["nbpra_status"] = O(C.ApprovalStatus.Pending);
-            req["nbpra_packagerevision"] = rev;
-            req["nbpra_idempotencykey"] = id.ToString("N") + ":signatory:" + rev;
-            var reqId = svc.Create(req);
-            foreach (var seat in seats)
-            {
-                var a = new Entity("nbpra_approvalassignment");
-                a["nbpra_name"] = "Signatory " + seat.GetAttributeValue<int?>("nbpra_slotnumber");
-                a["nbpra_approvalrequest"] = new EntityReference("nbpra_approvalrequest", reqId);
-                a["nbpra_assigneduser"] = seat.GetAttributeValue<EntityReference>("nbpra_person");
-                a["nbpra_signatoryassignment"] = seat.ToEntityReference();
-                a["nbpra_assignedat"] = now;
-                a["nbpra_status"] = O(C.AssignmentStatus.Pending);
-                svc.Create(a);
-            }
-            Touch(id, C.SubmissionStatus.AwaitingSignatoryApproval, e => e["nbpra_packagerevision"] = rev);
-            Event(subRef, C.EventType.Signatory, "Package sent to five signatories", C.SubmissionStatus.Label(st), "Awaiting Signatory Approval", null, "Package rev " + rev, "nbpra_approvalrequest", reqId, reqId.ToString("N") + ":requested");
+            if (!SignatoryStage(Opt(sub, "nbpra_status"))) throw Invalid("Signatories can be chosen once the checklist is open and before the final submission.");
+            var p = Parse<PersonIn>(payload);
+            if (p.Seat < 1 || p.Seat > Seats) throw Invalid("Choose one of the six signatory seats.");
+            if (p.Seat == 1) p.Role = SponsorRole;
+            var seatId = SetSeat(id, p.Seat, p);
+            Gate(id);
+            Touch(id);
+            return seatId;
         }
 
-        private string DecideSignatory(Guid assignmentId, string outcome, string comment)
+        private Entity LoadSeat(Guid seatId)
         {
-            if (outcome != "approve" && outcome != "return") throw Invalid("Choose Approve or Return.");
-            Entity a;
+            Entity seat;
             try
             {
-                a = svc.Retrieve("nbpra_approvalassignment", assignmentId, new ColumnSet("nbpra_status", "nbpra_assigneduser", "nbpra_approvalrequest", "nbpra_signatoryassignment", "nbpra_name"));
+                seat = svc.Retrieve("nbpra_signatory", seatId, new ColumnSet("nbpra_submission", "nbpra_slotnumber", "nbpra_displayname", "nbpra_email", "nbpra_role", "nbpra_status", "nbpra_iscurrent"));
             }
             catch (Exception)
             {
-                throw Invalid("Signatory assignment not found.");
+                throw Invalid("Signatory not found.");
             }
-            if (Opt(a, "nbpra_status") != C.AssignmentStatus.Pending) throw Resolved("This signatory decision has already been recorded or is no longer needed.");
-            // FR-22: nobody, including an administrator, signs in another person's name.
-            if (a.GetAttributeValue<EntityReference>("nbpra_assigneduser")?.Id != actor) throw Denied("Only the named signatory can record this decision.");
-            var reqRef = a.GetAttributeValue<EntityReference>("nbpra_approvalrequest");
-            var req = svc.Retrieve("nbpra_approvalrequest", reqRef.Id, new ColumnSet("nbpra_status", "nbpra_purpose", "nbpra_submission", "nbpra_packagerevision"));
-            if (Opt(req, "nbpra_purpose") != C.ApprovalPurpose.SignatoryPackage || Opt(req, "nbpra_status") != C.ApprovalStatus.Pending)
-                throw Resolved("This signatory request is no longer open.");
+            if (seat.GetAttributeValue<bool?>("nbpra_iscurrent") != true) throw Resolved("That signatory has since been replaced.");
+            return seat;
+        }
+
+        private static string SeatLabel(Entity seat)
+        {
+            var role = seat.GetAttributeValue<string>("nbpra_role");
+            return seat.GetAttributeValue<string>("nbpra_displayname") + (string.IsNullOrWhiteSpace(role) ? string.Empty : " (" + role + ")");
+        }
+
+        /// <summary>Marks one signatory's request Pending. A cloud flow watching for that sends the approval.</summary>
+        private string SendSignatory(Guid seatId)
+        {
+            var seat = LoadSeat(seatId);
+            var sub = LoadSubmission(seat.GetAttributeValue<EntityReference>("nbpra_submission").Id);
+            RequireOwner(sub);
+            if (!SignatoryStage(Opt(sub, "nbpra_status"))) throw Invalid("Signatory approval cannot be requested at this stage.");
+            var st = Opt(seat, "nbpra_status");
+            if (st == C.SignatoryStatus.Pending) throw Resolved("The approval request has already been sent to " + seat.GetAttributeValue<string>("nbpra_displayname") + ".");
+            if (st == C.SignatoryStatus.Approved) throw Resolved(seat.GetAttributeValue<string>("nbpra_displayname") + " has already approved.");
+
+            var up = new Entity("nbpra_signatory", seatId);
+            up["nbpra_status"] = O(C.SignatoryStatus.Pending);
+            up["nbpra_requestedat"] = now;
+            up["nbpra_decidedat"] = null;
+            up["nbpra_decisioncomment"] = null;
+            up["nbpra_decisionchannel"] = null;
+            svc.Update(up);
+            Touch(sub.Id);
+            Event(sub.ToEntityReference(), C.EventType.Signatory, "Approval requested from " + SeatLabel(seat), null, null, null, null, "nbpra_signatory", seatId, seatId.ToString("N") + ":sent:" + now.Ticks);
+            return "Approval request sent to " + seat.GetAttributeValue<string>("nbpra_displayname") + ".";
+        }
+
+        private bool HasRole(string roleName)
+        {
+            var q = new QueryExpression("role") { ColumnSet = new ColumnSet(false), TopCount = 1 };
+            q.AddLink("systemuserroles", "roleid", "roleid").LinkCriteria.AddCondition("systemuserid", ConditionOperator.Equal, actor);
+            q.Criteria.AddCondition("name", ConditionOperator.Equal, roleName);
+            return svc.RetrieveMultiple(q).Entities.Any();
+        }
+
+        /// <summary>
+        /// Records one signatory's answer. Three callers are accepted: the signatory
+        /// (matched by email), the approval flow reporting who responded, and an
+        /// administrator recording an answer received some other way.
+        /// </summary>
+        private string DecideSignatory(Guid seatId, string outcome, string comment, string payload)
+        {
+            if (outcome != "approve" && outcome != "return") throw Invalid("Choose Approve or Return.");
+            var seat = LoadSeat(seatId);
+            var st = Opt(seat, "nbpra_status");
+            if (st == C.SignatoryStatus.Approved || st == C.SignatoryStatus.Returned) throw Resolved("This signatory's decision has already been recorded.");
+            if (st != C.SignatoryStatus.Pending) throw Invalid("The approval request has not been sent to this signatory yet.");
+
+            var email = seat.GetAttributeValue<string>("nbpra_email");
+            var responder = string.IsNullOrWhiteSpace(payload) ? null : Parse<PersonIn>(payload).Responder;
+            int channel;
+            string by;
+            if (!string.IsNullOrWhiteSpace(responder))
+            {
+                if (!AdminDecision.IsAdmin(svc, actor) && !HasRole("NBPRA Automation")) throw Denied("Only the approval flow can report a signatory's response.");
+                if (!SameEmail(responder, email)) throw Denied("The response came from " + responder + ", who is not the named signatory.");
+                channel = C.Channel.Flow;
+                by = string.Empty;
+            }
+            else if (SameEmail(ActorEmail(), email))
+            {
+                channel = C.Channel.App;
+                by = string.Empty;
+            }
+            else
+            {
+                if (!AdminDecision.IsAdmin(svc, actor)) throw Denied("Only the named signatory can record this decision.");
+                if (comment.Length == 0) throw Invalid("Say how the signatory's answer was received before recording it for them.");
+                channel = C.Channel.App;
+                by = " (recorded by the administrator)";
+            }
             if (outcome == "return" && comment.Length == 0) throw Invalid("Enter a reason before returning the package.");
 
-            var sub = LoadSubmission(req.GetAttributeValue<EntityReference>("nbpra_submission").Id);
-            var subRef = sub.ToEntityReference();
-            var subject = "Package rev " + (req.GetAttributeValue<int?>("nbpra_packagerevision") ?? 1);
-            var seatName = a.GetAttributeValue<string>("nbpra_name");
+            var sub = LoadSubmission(seat.GetAttributeValue<EntityReference>("nbpra_submission").Id);
             var approve = outcome == "approve";
-            RecordDecision(reqRef.Id, null, assignmentId, approve ? C.DecisionOutcome.Approve : C.DecisionOutcome.ChangesRequested, comment, subject, seatName + (approve ? " approved" : " returned the package"));
-            Event(subRef, C.EventType.Signatory, seatName + (approve ? " approved" : " returned the package"), null, null, comment, subject, "nbpra_approvalassignment", assignmentId, assignmentId.ToString("N") + ":" + outcome);
+            var up = new Entity("nbpra_signatory", seatId);
+            up["nbpra_status"] = O(approve ? C.SignatoryStatus.Approved : C.SignatoryStatus.Returned);
+            up["nbpra_decidedat"] = now;
+            up["nbpra_decisioncomment"] = comment;
+            up["nbpra_decisionchannel"] = O(channel);
+            svc.Update(up);
+            Touch(sub.Id);
+            AdminDecision.WriteEvent(svc, sub.ToEntityReference(), C.EventType.Signatory, SeatLabel(seat) + (approve ? " approved" : " returned the package") + by, now,
+                channel == C.Channel.Flow ? null : actorRef, channel == C.Channel.Flow ? C.ActorKind.System : C.ActorKind.Human, "nbpra_signatory", seatId,
+                null, null, comment, channel, seatId.ToString("N") + ":" + outcome + ":" + now.Ticks, null);
 
-            var rest = Rows("nbpra_approvalassignment", new ColumnSet("nbpra_status"), ("nbpra_approvalrequest", reqRef.Id)).Where(x => x.Id != assignmentId).ToList();
-            if (!approve)
+            if (!approve) { Gate(sub.Id); return "The package was returned to the submitter by " + seat.GetAttributeValue<string>("nbpra_displayname") + "."; }
+            var left = Seats - CurrentSeats(sub.Id).Count(x => Opt(x, "nbpra_status") == C.SignatoryStatus.Approved);
+            return Gate(sub.Id) ? "All six signatories have approved and every section is approved. The package is ready for final submission."
+                : left > 0 ? "Approval recorded. " + left + " signatory approval(s) still outstanding." : "Approval recorded. All six signatories have approved; sections are still open.";
+        }
+
+        private int OpenSections(Guid submissionId) =>
+            Rows("nbpra_sectioninstance", new ColumnSet("nbpra_status", "nbpra_isapplicable"), ("nbpra_submission", submissionId))
+                .Count(s => s.GetAttributeValue<bool?>("nbpra_isapplicable") != false && Opt(s, "nbpra_status") != C.SectionStatus.Approved && Opt(s, "nbpra_status") != C.SectionStatus.NotApplicable);
+
+        private bool AllSigned(Guid submissionId)
+        {
+            var seats = CurrentSeats(submissionId);
+            return Enumerable.Range(1, Seats).All(n => seats.Any(x => (x.GetAttributeValue<int?>("nbpra_slotnumber") ?? 0) == n && Opt(x, "nbpra_status") == C.SignatoryStatus.Approved));
+        }
+
+        /// <summary>
+        /// Moves the submission between "in progress" and "ready for final submission" as
+        /// sections and signatories complete, in whatever order. True when it is ready.
+        /// </summary>
+        private bool Gate(Guid submissionId)
+        {
+            var st = Opt(svc.Retrieve("nbpra_submission", submissionId, new ColumnSet("nbpra_status")), "nbpra_status");
+            if (st != C.SubmissionStatus.ChecklistInProgress && st != C.SubmissionStatus.AwaitingSignatoryApproval && st != C.SubmissionStatus.ReadyForFinalSubmission) return false;
+            var ready = OpenSections(submissionId) == 0 && AllSigned(submissionId);
+            var subRef = new EntityReference("nbpra_submission", submissionId);
+            if (ready && st != C.SubmissionStatus.ReadyForFinalSubmission)
             {
-                foreach (var p in rest.Where(x => Opt(x, "nbpra_status") == C.AssignmentStatus.Pending))
-                {
-                    var c = new Entity("nbpra_approvalassignment", p.Id);
-                    c["nbpra_status"] = O(C.AssignmentStatus.Canceled);
-                    svc.Update(c);
-                }
-                CloseRequest(reqRef.Id, C.ApprovalStatus.ChangesRequested);
-                Touch(sub.Id, C.SubmissionStatus.ChecklistInProgress);
-                Event(subRef, C.EventType.Invalidation, "Signatory approvals invalidated", "Awaiting Signatory Approval", "Checklist in Progress", "A signatory returned the package.", subject,
-                    "nbpra_approvalrequest", reqRef.Id, reqRef.Id.ToString("N") + ":invalidated", true);
-                return "The package was returned to the submitter.";
+                Touch(submissionId, C.SubmissionStatus.ReadyForFinalSubmission);
+                Event(subRef, C.EventType.Signatory, "Every section and all six signatories approved", C.SubmissionStatus.Label(st), "Ready for Final Submission", null, null, "nbpra_submission", submissionId, submissionId.ToString("N") + ":ready:" + now.Ticks, true);
             }
-            var pending = rest.Count(x => Opt(x, "nbpra_status") == C.AssignmentStatus.Pending);
-            if (pending > 0)
+            else if (!ready && st == C.SubmissionStatus.ReadyForFinalSubmission)
             {
-                Touch(sub.Id);
-                return "Approval recorded. " + pending + " signatory approval(s) still outstanding.";
+                Touch(submissionId, C.SubmissionStatus.ChecklistInProgress);
+                Event(subRef, C.EventType.Invalidation, "No longer ready for final submission", "Ready for Final Submission", "Checklist in Progress", "A signatory was changed or returned the package.", null, "nbpra_submission", submissionId, submissionId.ToString("N") + ":unready:" + now.Ticks, true);
             }
-            CloseRequest(reqRef.Id, C.ApprovalStatus.Approved);
-            Touch(sub.Id, C.SubmissionStatus.ReadyForFinalSubmission);
-            Event(subRef, C.EventType.Signatory, "All five signatories approved", "Awaiting Signatory Approval", "Ready for Final Submission", null, subject, "nbpra_approvalrequest", reqRef.Id, reqRef.Id.ToString("N") + ":complete", true);
-            return "All five signatories have approved. The package is ready for final submission.";
+            return ready;
         }
 
         private void FinalSubmit(Guid id)
@@ -964,15 +1043,12 @@ namespace Nbpra.Plugins
             RequireOwner(sub);
             var st = Opt(sub, "nbpra_status");
             if (st == C.SubmissionStatus.AwaitingFinalAdminReview) throw Resolved("The final submission has already been made.");
-            if (st != C.SubmissionStatus.ReadyForFinalSubmission) throw Invalid("Final submission needs every section approved and all five signatory approvals.");
+            if (st != C.SubmissionStatus.ReadyForFinalSubmission && st != C.SubmissionStatus.FinalChangesRequested) throw Invalid("Final submission needs every section approved and all six signatory approvals.");
             // FR-24: recheck the gates on the canonical records, not the status alone.
-            var rev = sub.GetAttributeValue<int?>("nbpra_packagerevision") ?? 0;
-            var sig = Rows("nbpra_approvalrequest", new ColumnSet("nbpra_status", "nbpra_packagerevision"), ("nbpra_submission", id), ("nbpra_purpose", C.ApprovalPurpose.SignatoryPackage))
-                .FirstOrDefault(r => (r.GetAttributeValue<int?>("nbpra_packagerevision") ?? 0) == rev);
-            if (sig == null || Opt(sig, "nbpra_status") != C.ApprovalStatus.Approved) throw Invalid("The five signatory approvals for the current package are not complete.");
-            var notApproved = Rows("nbpra_sectioninstance", new ColumnSet("nbpra_status", "nbpra_isapplicable"), ("nbpra_submission", id))
-                .Count(s => s.GetAttributeValue<bool?>("nbpra_isapplicable") != false && Opt(s, "nbpra_status") != C.SectionStatus.Approved && Opt(s, "nbpra_status") != C.SectionStatus.NotApplicable);
-            if (notApproved > 0) throw Invalid(notApproved + " section(s) are no longer approved.");
+            var rev = (sub.GetAttributeValue<int?>("nbpra_packagerevision") ?? 0) + 1;
+            if (!AllSigned(id)) throw Invalid("The six signatory approvals are not complete.");
+            var notApproved = OpenSections(id);
+            if (notApproved > 0) throw Invalid(notApproved + " section(s) are not approved.");
             if (sub.GetAttributeValue<EntityReference>("nbpra_assignedslot") == null) throw Invalid("The submission has no confirmed committee slot.");
 
             var subRef = sub.ToEntityReference();
@@ -985,8 +1061,8 @@ namespace Nbpra.Plugins
             req["nbpra_packagerevision"] = rev;
             req["nbpra_idempotencykey"] = id.ToString("N") + ":final:" + rev;
             var reqId = svc.Create(req);
-            Touch(id, C.SubmissionStatus.AwaitingFinalAdminReview, e => e["nbpra_finalsubmittedat"] = now);
-            Event(subRef, C.EventType.FinalSubmission, "Final submission made", "Ready for Final Submission", "Awaiting Final Admin Review", null, "Package rev " + rev, "nbpra_approvalrequest", reqId, reqId.ToString("N") + ":final");
+            Touch(id, C.SubmissionStatus.AwaitingFinalAdminReview, e => { e["nbpra_finalsubmittedat"] = now; e["nbpra_packagerevision"] = rev; });
+            Event(subRef, C.EventType.FinalSubmission, "Final submission made", C.SubmissionStatus.Label(st), "Awaiting Final Admin Review", null, "Package rev " + rev, "nbpra_approvalrequest", reqId, reqId.ToString("N") + ":final");
         }
     }
 }

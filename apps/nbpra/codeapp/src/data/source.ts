@@ -32,7 +32,8 @@ export interface DataSource {
 
   // Calendar and onboarding
   listMeetings(): Promise<MeetingInfo[]>;
-  listPeople(): Promise<Person[]>;
+  /** Company directory search by name or email. */
+  searchPeople(term: string): Promise<Person[]>;
   getIntake(submissionId: string): Promise<Intake>;
   saveOnboarding(submissionId: string | undefined, intake: Intake): Promise<OpResult<string>>;
   submitOnboarding(submissionId: string): Promise<OpResult>;
@@ -54,10 +55,14 @@ export interface DataSource {
   listReviewTasks(): Promise<ReviewTask[]>;
   getReview(requestId: string): Promise<ReviewDetail | undefined>;
   decideReview(requestId: string, outcome: "approve" | "changes", comment: string): Promise<OpResult>;
-  /** Names the five signatories and sends them the package. */
-  requestSignatories(submissionId: string, signatories: string[]): Promise<OpResult>;
+  /** Names the person for one signatory seat (2 to 6; seat 1 is the sponsor). Returns the signatory id. */
+  setSignatory(submissionId: string, seat: number, person: Person, role: string): Promise<OpResult<string>>;
+  /** Sends that signatory their approval request. Each can be sent as soon as their area is done. */
+  sendSignatory(signatoryId: string): Promise<OpResult>;
+  /** Requests waiting on the signed-in person. Most signatories answer from the email instead. */
   listSignatoryTasks(): Promise<SignatoryTask[]>;
-  decideSignatory(assignmentId: string, outcome: "approve" | "return", comment: string): Promise<OpResult>;
+  /** The signatory's own answer, or an administrator recording one received another way (comment required). */
+  decideSignatory(signatoryId: string, outcome: "approve" | "return", comment: string): Promise<OpResult>;
   finalSubmit(submissionId: string): Promise<OpResult>;
 
   /** Administrator's update for the submitter. Replaces the one shown; all are kept in the timeline. */

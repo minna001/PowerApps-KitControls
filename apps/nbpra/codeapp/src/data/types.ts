@@ -57,10 +57,22 @@ export interface SectionSummary {
   groups: { name: string; state: DecisionState }[];
 }
 
+/** Seats on every submission: the sponsor named at onboarding plus five the submitter chooses. */
+export const SIGNATORY_SEATS = 6;
+
 export interface Signatory {
+  /** Empty until a person is named for the seat. */
+  id: string;
+  /** 1 is the business unit sponsor; 2 to 6 are chosen by the submitter. */
   slot: number;
   name: string;
+  email: string;
+  /** What the person signs for, in the submitter's words. */
+  role: string;
   state: DecisionState;
+  requestedAt?: string;
+  decidedAt?: string;
+  comment?: string;
 }
 
 export interface SubmissionDetail extends Submission {
@@ -134,12 +146,17 @@ export type ActionResult = { ok: true } | { ok: false; error: string };
 export interface UserContext {
   userId: string;
   fullName: string;
+  email: string;
   isAdmin: boolean;
 }
 
+/** A person from the company directory. They need not be a user of this app. */
 export interface Person {
+  /** Directory object id. */
   id: string;
   name: string;
+  email: string;
+  jobTitle?: string;
 }
 
 /** A committee meeting takes a fixed number of submissions; there are no individual time slots. */
@@ -176,10 +193,9 @@ export interface Intake {
   proposalType: string;
   summary: string;
   scope: string;
-  sponsorId: string;
+  /** Business unit sponsor: named here, and the sixth signatory at the end. */
+  sponsor: Person | null;
   slotId: string;
-  /** The five seats as named so far (empty string = unfilled). Named when the package is sent to signatories, not at onboarding. */
-  signatories: string[];
   /** Reference of the earlier submission this draft was started from, if any. Read-only. */
   copiedFrom?: string;
 }
@@ -248,12 +264,13 @@ export interface ReviewDetail extends ReviewTask {
 }
 
 export interface SignatoryTask {
-  assignmentId: string;
+  signatoryId: string;
   submissionId: string;
   reference: string;
   title: string;
-  seat: string;
-  packageRevision: number;
+  /** What the signed-in person is asked to sign for. */
+  role: string;
+  requestedAt?: string;
 }
 
 export type OpResult<T = void> = { ok: true; message: string; data: T } | { ok: false; error: string };

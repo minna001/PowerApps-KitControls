@@ -51,5 +51,22 @@ export function createWebApiTransport(opts: WebApiOptions = {}): Transport {
     adminDecision(SubmissionId, Action, Comment) {
       return post("nbpra_AdminDecision", { SubmissionId, Action, Comment, Channel: "App" });
     },
+    // Without a connector, the directory is read through Dataverse's "Microsoft Entra ID
+    // users" virtual table, which lists everyone in the tenant, not only app users.
+    async searchPeople(term) {
+      const q = term.replace(/'/g, "''");
+      const get = async (path: string): Promise<Row[]> => {
+        const r = await doFetch(base + path, { headers });
+        if (!r.ok) throw new Error(`Directory search failed (${r.status}).`);
+        return (await r.json()).value ?? [];
+      };
+      try {
+        const rows = await get(`aadusers?$select=aaduserid,displayname,mail,userprincipalname,jobtitle&$filter=${encodeURIComponent(`startswith(displayname,'${q}') or startswith(mail,'${q}')`)}&$top=10`);
+        return rows.map((u) => ({ id: u.aaduserid, name: u.displayname ?? u.mail, email: u.mail ?? u.userprincipalname ?? "", jobTitle: u.jobtitle ?? undefined })).filter((u) => u.email);
+      } catch {
+        const rows = await get(`systemusers?$select=systemuserid,azureactivedirectoryobjectid,fullname,internalemailaddress,title&$filter=${encodeURIComponent(`isdisabled eq false and accessmode eq 0 and (contains(fullname,'${q}') or startswith(internalemailaddress,'${q}'))`)}&$top=10`);
+        return rows.map((u) => ({ id: u.azureactivedirectoryobjectid ?? u.systemuserid, name: u.fullname, email: u.internalemailaddress ?? "", jobTitle: u.title ?? undefined })).filter((u) => u.email);
+      }
+    },
   };
 }

@@ -51,7 +51,7 @@ const APIS = [
     name: "NBPRA workflow",
     description: "Submitter, functional reviewer and signatory steps: onboarding, checklist sections, reviews, signatory approvals and final submission.",
     params: [
-      param("Operation", "context, saveOnboarding, submitOnboarding, saveSection, submitSection, decideReview, requestSignatories, decideSignatory or finalSubmit."),
+      param("Operation", "context, saveOnboarding, submitOnboarding, saveSection, submitSection, decideReview, setSignatory, sendSignatory, decideSignatory or finalSubmit."),
       param("TargetId", "Id of the record the operation acts on.", true),
       param("Outcome", "approve, changes or return, for decisions.", true),
       param("Comment", "Reason; required to request changes or return.", true),

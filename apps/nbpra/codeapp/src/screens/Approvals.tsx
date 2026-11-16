@@ -105,7 +105,7 @@ export function Approvals({ source }: { source: DataSource }) {
       )}
 
       <h2 className="sub-title">Signatory approvals</h2>
-      <p className="muted">Complete packages waiting for your approval as a named signatory.</p>
+      <p className="muted">Packages waiting for your approval as a named signatory. You can also answer from the approval email.</p>
       {seats === undefined ? (
         <p className="muted">Loading…</p>
       ) : seats.length === 0 ? (
@@ -113,25 +113,25 @@ export function Approvals({ source }: { source: DataSource }) {
       ) : (
         <div className="stack">
           {seats.map((t) => (
-            <div key={t.assignmentId} className="panel">
+            <div key={t.signatoryId} className="panel">
               <div className="task-row">
                 <div>
                   <div className="next-title">
-                    {t.title} · {t.seat}
+                    {t.title} · {t.role}
                   </div>
                   <div className="muted">
-                    <span className="mono">{t.reference}</span> · package revision {t.packageRevision} · <a href={`#/submission/${t.submissionId}`}>open the package</a>
+                    <span className="mono">{t.reference}</span> · <a href={`#/submission/${t.submissionId}`}>open the package</a>
                   </div>
                 </div>
                 <div className="actions tight">
-                  <Button appearance="primary" disabled={busy} onClick={() => run(() => source.decideSignatory(t.assignmentId, "approve", ""))}>
+                  <Button appearance="primary" disabled={busy} onClick={() => run(() => source.decideSignatory(t.signatoryId, "approve", ""))}>
                     Approve
                   </Button>
                   <Button
                     disabled={busy}
                     onClick={() => {
                       const reason = window.prompt("Reason for returning the package (required):", "");
-                      if (reason !== null) run(() => source.decideSignatory(t.assignmentId, "return", reason));
+                      if (reason !== null) run(() => source.decideSignatory(t.signatoryId, "return", reason));
                     }}
                   >
                     Return

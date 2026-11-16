@@ -43,7 +43,7 @@ const PROTECTED = {
   submission: ["reference", "status", "packagerevision", "currentslotrequest", "assignedslot", "checklisttemplate", "finalsubmittedat", "committeeauthorizedat", "committeeauthorizedby", "lastbusinessactivityat", "withdrawnat"],
   slot: ["activeallocationcount"],
 };
-const READ_ONLY_TABLES = ["approvaldecision", "businessevent", "approvalassignment", "approvalrequest", "slotrequest", "communication", "exportpackage", "sectionrevision", "answer"];
+const READ_ONLY_TABLES = ["signatory", "approvaldecision", "businessevent", "approvalassignment", "approvalrequest", "slotrequest", "communication", "exportpackage", "sectionrevision", "answer"];
 
 // table -> [tab label, child table, child lookup column, view name]
 const RELATED = {

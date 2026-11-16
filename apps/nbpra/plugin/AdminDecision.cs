@@ -246,12 +246,6 @@ namespace Nbpra.Plugins
                 WriteEvent(svc, subRef, C.EventType.Checklist, "Checklist unlocked", now, null, C.ActorKind.System, "nbpra_submission", submissionId,
                     null, null, null, C.Channel.System, requestId.ToString("N") + ":unlock", subject);
             }
-            if (action == "returnFinal")
-            {
-                WriteEvent(svc, subRef, C.EventType.Invalidation, "Five signatory approvals invalidated", now, null, C.ActorKind.System, "nbpra_submission", submissionId,
-                    null, null, "Package returned for changes.", C.Channel.System, requestId.ToString("N") + ":invalidate", subject);
-            }
-
             Reply("accepted", spec.Label + ".", C.SubmissionStatus.Label(spec.To));
         }
 
