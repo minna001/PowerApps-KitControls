@@ -27,7 +27,7 @@ export function Reuse({ source, user }: { source: DataSource; user: UserContext 
     <>
       <PageHead eyebrow="New submission" title="Start from a previous submission" />
       <p className="lead">
-        The new draft takes the earlier submission's proposal details and, once its onboarding is approved, its checklist answers. You then change only what differs. It does not take the committee slot, the five signatories, any uploaded
+        The new draft takes the earlier submission's proposal details and, once its onboarding is approved, its checklist answers. You then change only what differs. It does not take the committee slot, the signatories, any uploaded
         files or any approvals: those always start fresh.
       </p>
       <Notice result={result} />

@@ -211,8 +211,9 @@ for (const [i, [title, area, type, status, age, slotKey, secApproved, sigApprove
     );
 
   await event(0, "Submission", "Draft created", { to: "Onboarding Draft" });
-  for (let n = 1; n <= 5; n++) {
-    await create("signatory", { name: `Signatory ${n}`, slotnumber: n, assignmentversion: 1, iscurrent: true, assignedat: at(0.02) }, { submission: S, person: ["systemuser", seat(i + n)], assignedby: ["systemuser", owner(i)] });
+  // Signatories are named when the package is sent to them, so earlier stages have none.
+  for (let n = 1; n <= (reached >= 3 ? 5 : 0); n++) {
+    await create("signatory", { name: `Signatory ${n}`, slotnumber: n, assignmentversion: 1, iscurrent: true, assignedat: at(0.61) }, { submission: S, person: ["systemuser", seat(i + n)], assignedby: ["systemuser", owner(i)] });
   }
 
   if (reached >= 1 && slotId) {
@@ -224,7 +225,7 @@ for (const [i, [title, area, type, status, age, slotKey, secApproved, sigApprove
     );
     await update("submission", sub, {}, { currentslotrequest: ["slotrequest", sr] });
     if (srStatus === "Approved" && !slotKey.startsWith("2026-11-25")) await update("slot", slotId, { activeallocationcount: 1 });
-    await event(0.05, "Slot", "Onboarding submitted with five signatories", { from: "Onboarding Draft", to: "Awaiting Onboarding Review", rev: "Onboarding rev 1" });
+    await event(0.05, "Slot", "Onboarding submitted", { from: "Onboarding Draft", to: "Awaiting Onboarding Review", rev: "Onboarding rev 1" });
 
     const req = await create(
       "approvalrequest",

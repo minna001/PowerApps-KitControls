@@ -7,6 +7,7 @@ import { buildMemo } from "../memo";
 import { saveToDisk } from "../files";
 import { formatDateTime } from "../components/ui";
 import { Checklist } from "../components/Checklist";
+import { SignatoryPicker } from "../components/SignatoryPicker";
 import { Notice } from "../components/ui";
 import { Button } from "@fluentui/react-components";
 import { AdminDecision } from "../components/AdminDecision";
@@ -88,7 +89,6 @@ export function Workspace({ source, user, id, initialTab }: { source: DataSource
   if (isOwner) {
     if (s.status === "Onboarding Draft" || s.status === "Onboarding Denied")
       ownerAction = { label: s.status === "Onboarding Denied" ? "Revise onboarding" : "Continue onboarding", hint: "Complete the intake details and submit the request.", go: () => (window.location.hash = `#/onboarding/${s.id}`) };
-    else if (checklistOpen && allApproved) ownerAction = { label: "Request signatory approval", hint: "Every section is approved. Send the complete package to the five signatories.", go: () => run(() => source.requestSignatories(s.id)) };
     else if (checklistOpen) ownerAction = { label: "Open the checklist", hint: "Answer each section and submit it for functional review.", go: () => setTab("Checklist") };
     else if (s.status === "Ready for Final Submission") ownerAction = { label: "Make final submission", hint: "All five signatories approved. Send the package to the NBPRA administrator.", go: () => run(() => source.finalSubmit(s.id)) };
   }
@@ -220,6 +220,16 @@ export function Workspace({ source, user, id, initialTab }: { source: DataSource
         </section>
 
         <aside className="ws-side">
+          {isOwner && checklistOpen && allApproved && !source.isSample && (
+            <SignatoryPicker
+              source={source}
+              submissionId={s.id}
+              onResult={(r) => {
+                setResult(r);
+                if (r.ok) load();
+              }}
+            />
+          )}
           {user.isAdmin && (
             <AdminDecision
               source={source}
@@ -255,7 +265,10 @@ export function Workspace({ source, user, id, initialTab }: { source: DataSource
             <div className="panel-head">
               Five signatories <span className="mono">{s.signatoriesApproved} of 5</span>
             </div>
-            {s.signatories.map((p) => (
+            {s.signatories.filter((p) => p.name !== "(unassigned)").length === 0 && <div className="sig-row muted">Named once every section is approved.</div>}
+            {s.signatories
+              .filter((p) => p.name !== "(unassigned)")
+              .map((p) => (
               <div key={p.slot} className="sig-row">
                 <span>{p.name}</span>
                 <DecisionPill state={p.state} />

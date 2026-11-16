@@ -70,7 +70,8 @@ Things to know:
 - Tables without their own navigation entry (Slot Request, Section Instance, Signatory
   Assignment, Approval Request, Business Event) are under Portfolio and Audit.
 - People are blank. Set a business owner on a submission, and a person on each signatory
-  seat, by hand if you want them shown.
+  seat, by hand if you want them shown. Only submissions that have reached signatory
+  approval have seats, because signatories are named at that point.
 - If date columns are rejected, the import expects your regional date format: open the
   CSV in Excel, format the date columns to match, and save.
 - Do not import a file twice; it would create duplicates.

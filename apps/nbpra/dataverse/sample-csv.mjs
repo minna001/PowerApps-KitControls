@@ -155,14 +155,15 @@ SUBS.forEach((s, i) => {
   let n = 0;
   const event = (f, type2, action, o = {}) => eventRows.push([action, title, type2, action, at(f), o.system ? "System" : "Human", o.channel ?? (o.system ? "System" : "App"), o.from ?? "", o.to ?? "", o.rev ?? "", o.reason ?? "", `sample:${i}:${++n}`]);
   event(0, "Submission", "Draft created", { to: "Onboarding Draft" });
-  for (let seat = 1; seat <= 5; seat++) seatRows.push([`${title} · signatory ${seat}`, title, seat, 1, "Yes", at(0.02)]);
+  // Signatories are named when the package is sent to them, so earlier stages have none.
+  if (r >= 3) for (let seat = 1; seat <= 5; seat++) seatRows.push([`${title} · signatory ${seat}`, title, seat, 1, "Yes", at(0.61)]);
 
   if (r >= 1 && slot) {
     const st = status === "Onboarding Denied" ? "Denied" : status === "Awaiting Onboarding Review" ? "Pending" : "Approved";
     const reqName = `${title} · onboarding rev 1`;
     requestRows.push([reqName, title, 1, st, slot, st === "Approved" ? slot : "", at(0.05), st === "Approved" ? "Yes" : "No"]);
     approvalRows.push([`Onboarding: ${title}`, title, "Onboarding", "One authorized", st === "Approved" ? "Approved" : st, "", reqName, `sample:${i}:onboarding`, st === "Pending" ? "" : at(0.1)]);
-    event(0.05, "Slot", "Onboarding submitted with five signatories", { from: "Onboarding Draft", to: "Awaiting Onboarding Review", rev: "Onboarding rev 1" });
+    event(0.05, "Slot", "Onboarding submitted", { from: "Onboarding Draft", to: "Awaiting Onboarding Review", rev: "Onboarding rev 1" });
     if (st === "Denied") event(0.3, "Slot", "Onboarding denied", { from: "Awaiting Onboarding Review", to: "Onboarding Denied", rev: "Onboarding rev 1", channel: "Email", reason: "Requested meeting is outside the committee remit." });
     if (st === "Approved") {
       event(0.1, "Slot", "Onboarding approved; slot confirmed", { from: "Awaiting Onboarding Review", to: "Checklist in Progress", rev: "Onboarding rev 1", channel: "Teams" });

@@ -110,7 +110,7 @@ export function createLiveSource(t: Transport): DataSource {
     else if (mine.some((s) => label(s) === "Changes Requested")) blocker = "A reviewer returned a checklist section";
     let [nextAction, nextActor] = NEXT[status] ?? ["", ""];
     if (status === "Checklist in Progress" && mine.length) {
-      if (mine.every((s) => label(s) === "Approved")) [nextAction, nextActor] = ["Request signatory approval", "Submitter"];
+      if (mine.every((s) => label(s) === "Approved")) [nextAction, nextActor] = ["Name the five signatories and send them the package", "Submitter"];
       else if (mine.every((s) => label(s) === "Approved" || label(s) === "Under Review")) [nextAction, nextActor] = ["Functional groups to review submitted sections", "Functional approvers"];
     }
     return {
@@ -323,7 +323,9 @@ export function createLiveSource(t: Transport): DataSource {
     },
 
     async saveOnboarding(submissionId, intake) {
-      return result(await t.workflow("saveOnboarding", submissionId, undefined, undefined, JSON.stringify(intake)), (d) => d);
+      // Signatories are named later, when the package is sent for their approval.
+      const { signatories: _later, copiedFrom: _readOnly, ...fields } = intake;
+      return result(await t.workflow("saveOnboarding", submissionId, undefined, undefined, JSON.stringify(fields)), (d) => d);
     },
     async submitOnboarding(submissionId) {
       return plain(await t.workflow("submitOnboarding", submissionId));
@@ -432,8 +434,8 @@ export function createLiveSource(t: Transport): DataSource {
     async decideReview(requestId, outcome, comment) {
       return plain(await t.workflow("decideReview", requestId, outcome, comment));
     },
-    async requestSignatories(submissionId) {
-      return plain(await t.workflow("requestSignatories", submissionId));
+    async requestSignatories(submissionId, signatories) {
+      return plain(await t.workflow("requestSignatories", submissionId, undefined, undefined, JSON.stringify({ signatories })));
     },
 
     async listSignatoryTasks(): Promise<SignatoryTask[]> {

@@ -112,7 +112,7 @@ const ORIGIN = "http://nbpra.test"; // never resolved; every request is intercep
     await p.getByLabel("Proposal classification").selectOption("New product");
     await p.getByLabel("Brief business description").fill("Created by the browser journey test.");
     await p.getByLabel("Indicative jurisdictions and scope").fill("United States");
-    for (let i = 1; i <= 5; i++) await p.getByLabel(new RegExp("^Signatory " + i)).selectOption({ index: 1 });
+    if (await p.getByLabel(/^Signatory 1/).count()) throw new Error("onboarding still asks for signatories");
     await shot("03-onboarding");
   });
   await step("submit onboarding", async () => {
@@ -191,7 +191,14 @@ const ORIGIN = "http://nbpra.test"; // never resolved; every request is intercep
   await step("request signatory approval", async () => {
     await p.goto(subUrl);
     await p.waitForSelector(".rail", { timeout: T });
-    await p.getByRole("button", { name: "Request signatory approval" }).click();
+    // The five names are entered here, at the end, not at onboarding.
+    await p.waitForSelector("text=Name the five signatories", { timeout: T });
+    await shot("10b-name-signatories");
+    for (let i = 1; i <= 5; i++) {
+      await p.waitForFunction((n) => document.querySelectorAll(".decision select")[n - 1]?.options.length > 1, i, { timeout: T });
+      await p.getByLabel(new RegExp("^Signatory " + i)).selectOption({ index: 1 });
+    }
+    await p.getByRole("button", { name: "Send to the five signatories" }).click();
     await p.waitForSelector('.ws-badges :text("Awaiting Signatory Approval")', { timeout: T });
     await shot("11-awaiting-signatories");
   });
@@ -238,15 +245,13 @@ const ORIGIN = "http://nbpra.test"; // never resolved; every request is intercep
     const copied = await p.getByLabel("Proposal title").inputValue();
     if (!copied.startsWith("Copy of " + title)) throw new Error("title was " + copied);
     if ((await p.getByLabel("Brief business description").inputValue()) === "") throw new Error("description was not copied");
-    if ((await p.getByLabel(/^Signatory 1/).inputValue()) !== "") throw new Error("signatories were copied");
     await shot("17-copy-onboarding");
   });
-  await step("copy: choose a slot and signatories, submit, approve", async () => {
+  await step("copy: choose a slot, submit, approve", async () => {
     await p.click('a:has-text("Choose a slot from the calendar")');
     await p.waitForSelector(".slot.open", { timeout: T });
     await p.locator(".slot.open").last().click();
     await p.waitForSelector(".form-grid .next-title", { timeout: T });
-    for (let i = 1; i <= 5; i++) await p.getByLabel(new RegExp("^Signatory " + i)).selectOption({ index: 1 });
     await p.getByRole("button", { name: "Submit request" }).click();
     await p.waitForSelector('.ws-badges :text("Awaiting Onboarding Review")', { timeout: T });
     await p.getByRole("button", { name: "Approve and unlock checklist" }).click();

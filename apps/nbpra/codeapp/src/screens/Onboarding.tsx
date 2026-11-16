@@ -8,7 +8,7 @@ const AREAS = ["Commercial Banking", "Global Markets", "Payments", "Retail Banki
 const TYPES = ["New business", "New product", "Product extension", "Material change"];
 const BLANK: Intake = { title: "", businessArea: "", proposalType: "", summary: "", scope: "", sponsorId: "", slotId: "", signatories: ["", "", "", "", ""] };
 
-/** Initial onboarding: intake details, requested slot and the five signatories (requirements 11.1). */
+/** Initial onboarding: intake details and the requested slot. The five signatories are named later, once the checklist is approved. */
 export function Onboarding({ source, user, id, pickedSlot }: { source: DataSource; user: UserContext; id?: string; pickedSlot?: string }) {
   const [intake, setIntake] = useState<Intake>();
   const [people, setPeople] = useState<Person[]>([]);
@@ -34,11 +34,8 @@ export function Onboarding({ source, user, id, pickedSlot }: { source: DataSourc
     setIntake({ ...intake, [k]: v });
     setDirty(true);
   };
-  const setSeat = (i: number, v: string) => set("signatories", intake.signatories.map((x, n) => (n === i ? v : x)));
 
   const slot = meetings.flatMap((m) => m.slots.map((s) => ({ ...s, meeting: m }))).find((s) => s.id === intake.slotId);
-  const chosen = intake.signatories.filter(Boolean);
-  const duplicates = new Set(chosen).size < chosen.length;
 
   async function save(): Promise<string | undefined> {
     const r = await source.saveOnboarding(sid, intake!);
@@ -74,11 +71,10 @@ export function Onboarding({ source, user, id, pickedSlot }: { source: DataSourc
   return (
     <>
       <PageHead eyebrow="New submission" title="Initial onboarding" />
-      <p className="lead">Save a draft at any point. When you submit, the request goes to the NBPRA administrator; the full checklist opens once they approve it.</p>
+      <p className="lead">Save a draft at any point. When you submit, the request goes to the NBPRA administrator; the full checklist opens once they approve it. You name the five signatories at the end, after every checklist section is approved.</p>
       {intake.copiedFrom && (
         <div className="notice info">
-          Started from <span className="mono">{intake.copiedFrom}</span>. Its checklist answers will be waiting as drafts once this request is approved. Choose a slot and five signatories here; those, files and approvals are never
-          copied.
+          Started from <span className="mono">{intake.copiedFrom}</span>. Its checklist answers will be waiting as drafts once this request is approved. Choose a slot here; the slot, signatories, files and approvals are never copied.
         </div>
       )}
       <Notice result={result} />
@@ -156,30 +152,6 @@ export function Onboarding({ source, user, id, pickedSlot }: { source: DataSourc
           </div>
         </section>
 
-        <section className="panel">
-          <div className="panel-head">
-            5 Signatories <span className="mono">{chosen.length} of 5</span>
-          </div>
-          <div className="panel-body fields">
-            <p className="muted">Five different people. Each approves the complete package before final submission.</p>
-            {intake.signatories.map((v, i) => {
-              const clash = v !== "" && intake.signatories.indexOf(v) !== i;
-              return (
-                <Field key={i} label={`Signatory ${i + 1}`} required validationState={clash ? "error" : "none"} validationMessage={clash ? "This person is already in another signatory seat." : undefined}>
-                  <Select value={v} onChange={(_, d) => setSeat(i, d.value)}>
-                    <option value="">Select a person…</option>
-                    {people.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
-              );
-            })}
-            {duplicates && <p className="muted">The server decides whether repeated people are allowed; in a test environment with fewer than five users they may be.</p>}
-          </div>
-        </section>
       </div>
 
       <div className="actions">

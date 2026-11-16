@@ -54,7 +54,8 @@ export interface DataSource {
   listReviewTasks(): Promise<ReviewTask[]>;
   getReview(requestId: string): Promise<ReviewDetail | undefined>;
   decideReview(requestId: string, outcome: "approve" | "changes", comment: string): Promise<OpResult>;
-  requestSignatories(submissionId: string): Promise<OpResult>;
+  /** Names the five signatories and sends them the package. */
+  requestSignatories(submissionId: string, signatories: string[]): Promise<OpResult>;
   listSignatoryTasks(): Promise<SignatoryTask[]>;
   decideSignatory(assignmentId: string, outcome: "approve" | "return", comment: string): Promise<OpResult>;
   finalSubmit(submissionId: string): Promise<OpResult>;

@@ -169,7 +169,7 @@ export interface Intake {
   scope: string;
   sponsorId: string;
   slotId: string;
-  /** Exactly five entries; an empty string is an unfilled seat. */
+  /** The five seats as named so far (empty string = unfilled). Named when the package is sent to signatories, not at onboarding. */
   signatories: string[];
   /** Reference of the earlier submission this draft was started from, if any. Read-only. */
   copiedFrom?: string;

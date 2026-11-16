@@ -61,7 +61,7 @@ export function Home({ source, user }: { source: DataSource; user: UserContext }
       ) : mine.length === 0 ? (
         <div className="empty-card">
           <p>You have no submissions yet.</p>
-          <p className="muted">Pick a committee slot from the calendar, then fill in the onboarding details. The checklist opens once the NBPRA administrator approves the request.</p>
+          <p className="muted">Pick a committee slot from the calendar, then fill in the onboarding details. The checklist opens once the NBPRA administrator approves the request; you name the five signatories at the end.</p>
           <a className="btn primary" href="#/calendar">
             Find a committee slot
           </a>

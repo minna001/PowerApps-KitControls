@@ -25,7 +25,7 @@ namespace Nbpra.Plugins
     ///   saveSection         TargetId = section instance; Payload = [{"q":questionId,"v":value}]
     ///   submitSection       TargetId = section instance
     ///   decideReview        TargetId = approval request; Outcome = approve | changes
-    ///   requestSignatories  TargetId = submission
+    ///   requestSignatories  TargetId = submission; Payload = {"signatories":[five user ids]}, named at this point
     ///   decideSignatory     TargetId = approval assignment; Outcome = approve | return
     ///   finalSubmit         TargetId = submission
     ///   uploadEvidence      TargetId = section instance; Payload = {"q","fileName","contentType","base64"} -> Data: evidence id
@@ -49,6 +49,12 @@ namespace Nbpra.Plugins
             [DataMember(Name = "scope")] public string Scope;
             [DataMember(Name = "sponsorId")] public string SponsorId;
             [DataMember(Name = "slotId")] public string SlotId;
+            [DataMember(Name = "signatories")] public List<string> Signatories;
+        }
+
+        [DataContract]
+        private sealed class SignatoriesIn
+        {
             [DataMember(Name = "signatories")] public List<string> Signatories;
         }
 
@@ -112,7 +118,7 @@ namespace Nbpra.Plugins
                     case "saveSection": data = SaveSection(Id(target), payload); message = "Section saved."; break;
                     case "submitSection": SubmitSection(Id(target)); message = "Section submitted for functional review."; break;
                     case "decideReview": message = DecideReview(Id(target), outcome, comment); break;
-                    case "requestSignatories": RequestSignatories(Id(target)); message = "Package sent to the five signatories."; break;
+                    case "requestSignatories": RequestSignatories(Id(target), payload); message = "Package sent to the five signatories."; break;
                     case "decideSignatory": message = DecideSignatory(Id(target), outcome, comment); break;
                     case "finalSubmit": FinalSubmit(Id(target)); message = "Final submission made. Awaiting the NBPRA administrator."; break;
                     case "uploadEvidence": data = UploadEvidence(Id(target), payload); message = "File uploaded."; break;
@@ -277,35 +283,57 @@ namespace Nbpra.Plugins
                 svc.Update(sr);
             }
 
-            var seats = Rows("nbpra_signatory", new ColumnSet("nbpra_slotnumber", "nbpra_person"), ("nbpra_submission", id), ("nbpra_iscurrent", true));
+            // Signatories are named at the end of the process, not here. Names sent with an
+            // onboarding save are still stored, so an older client keeps working.
+            if (d.Signatories != null && d.Signatories.Any(x => !string.IsNullOrWhiteSpace(x))) SetSeats(id, d.Signatories);
+            return id;
+        }
+
+        /// <summary>
+        /// Stores the five named signatories. Replacing a person who was already
+        /// named keeps the earlier assignment as history and adds a new version.
+        /// </summary>
+        private void SetSeats(Guid submissionId, List<string> wantedIds)
+        {
+            var subRef = new EntityReference("nbpra_submission", submissionId);
+            var seats = Rows("nbpra_signatory", new ColumnSet("nbpra_slotnumber", "nbpra_person", "nbpra_assignmentversion"), ("nbpra_submission", submissionId), ("nbpra_iscurrent", true));
             for (var n = 1; n <= 5; n++)
             {
-                var wanted = d.Signatories != null && d.Signatories.Count >= n && Guid.TryParse(d.Signatories[n - 1], out var pid) ? new EntityReference("systemuser", pid) : null;
-                var seat = seats.FirstOrDefault(s => (s.GetAttributeValue<int?>("nbpra_slotnumber") ?? 0) == n);
-                if (seat == null)
+                var wanted = wantedIds != null && wantedIds.Count >= n && Guid.TryParse(wantedIds[n - 1], out var pid) ? new EntityReference("systemuser", pid) : null;
+                var seat = seats.FirstOrDefault(x => (x.GetAttributeValue<int?>("nbpra_slotnumber") ?? 0) == n);
+                var current = seat?.GetAttributeValue<EntityReference>("nbpra_person");
+                if (seat != null && current?.Id == wanted?.Id) continue;
+                var version = 1;
+                if (seat != null && current == null)
                 {
-                    var s = new Entity("nbpra_signatory");
-                    s["nbpra_name"] = "Signatory " + n;
-                    s["nbpra_submission"] = subRef;
-                    s["nbpra_slotnumber"] = n;
-                    s["nbpra_assignmentversion"] = 1;
-                    s["nbpra_iscurrent"] = true;
-                    s["nbpra_person"] = wanted;
-                    s["nbpra_assignedat"] = now;
-                    s["nbpra_assignedby"] = actorRef;
-                    s["ownerid"] = actorRef;
-                    svc.Create(s);
+                    var fill = new Entity("nbpra_signatory", seat.Id);
+                    fill["nbpra_person"] = wanted;
+                    fill["nbpra_assignedat"] = now;
+                    fill["nbpra_assignedby"] = actorRef;
+                    svc.Update(fill);
+                    continue;
                 }
-                else if (seat.GetAttributeValue<EntityReference>("nbpra_person")?.Id != wanted?.Id)
+                if (seat != null)
                 {
-                    var s = new Entity("nbpra_signatory", seat.Id);
-                    s["nbpra_person"] = wanted;
-                    s["nbpra_assignedat"] = now;
-                    s["nbpra_assignedby"] = actorRef;
-                    svc.Update(s);
+                    var old = new Entity("nbpra_signatory", seat.Id);
+                    old["nbpra_iscurrent"] = false;
+                    old["nbpra_replacedat"] = now;
+                    old["nbpra_replacementreason"] = "Replaced by the business owner before signatory approval.";
+                    svc.Update(old);
+                    version = (seat.GetAttributeValue<int?>("nbpra_assignmentversion") ?? 1) + 1;
                 }
+                var s = new Entity("nbpra_signatory");
+                s["nbpra_name"] = "Signatory " + n;
+                s["nbpra_submission"] = subRef;
+                s["nbpra_slotnumber"] = n;
+                s["nbpra_assignmentversion"] = version;
+                s["nbpra_iscurrent"] = true;
+                s["nbpra_person"] = wanted;
+                s["nbpra_assignedat"] = now;
+                s["nbpra_assignedby"] = actorRef;
+                s["ownerid"] = actorRef;
+                svc.Create(s);
             }
-            return id;
         }
 
         private void SubmitOnboarding(Guid id)
@@ -327,12 +355,7 @@ namespace Nbpra.Plugins
             var slotRef = draft?.GetAttributeValue<EntityReference>("nbpra_requestedslot");
             if (slotRef == null) missing.Add("requested committee slot");
 
-            var people = Rows("nbpra_signatory", new ColumnSet("nbpra_person"), ("nbpra_submission", id), ("nbpra_iscurrent", true))
-                .Select(s => s.GetAttributeValue<EntityReference>("nbpra_person")?.Id).Where(p => p.HasValue).Select(p => p.Value).ToList();
-            if (people.Count < 5) missing.Add("five signatories");
             if (missing.Count > 0) throw Invalid("Complete these before submitting: " + string.Join(", ", missing) + ".");
-            if (people.Distinct().Count() < 5 && !AdminDecision.Flag(svc, "nbpra_AllowDuplicateSignatories"))
-                throw Invalid("The five signatories must be five different people.");
 
             var slot = svc.Retrieve("nbpra_slot", slotRef.Id, new ColumnSet("nbpra_status", "nbpra_meeting"));
             if (Opt(slot, "nbpra_status") != C.SlotStatus.Open) throw Invalid("That slot can no longer be requested. Choose another.");
@@ -366,11 +389,11 @@ namespace Nbpra.Plugins
             sr["nbpra_submittedby"] = actorRef;
             sr["nbpra_decisionrequest"] = new EntityReference("nbpra_approvalrequest", reqId);
             sr["nbpra_intakesnapshot"] = "{\"title\":\"" + Js(title) + "\",\"businessArea\":\"" + Js(sub.GetAttributeValue<string>("nbpra_businessarea")) + "\",\"proposalType\":\"" +
-                Js(sub.GetAttributeValue<string>("nbpra_proposaltype")) + "\",\"slot\":\"" + slotRef.Id + "\",\"signatories\":[" + string.Join(",", people.Select(p => "\"" + p + "\"")) + "]}";
+                Js(sub.GetAttributeValue<string>("nbpra_proposaltype")) + "\",\"slot\":\"" + slotRef.Id + "\"}";
             svc.Update(sr);
 
             Touch(id, C.SubmissionStatus.AwaitingOnboardingReview, e => e["nbpra_currentslotrequest"] = draft.ToEntityReference());
-            Event(subRef, C.EventType.Slot, "Onboarding submitted with five signatories", C.SubmissionStatus.Label(st), "Awaiting Onboarding Review", null, "Onboarding rev " + rev,
+            Event(subRef, C.EventType.Slot, "Onboarding submitted", C.SubmissionStatus.Label(st), "Awaiting Onboarding Review", null, "Onboarding rev " + rev,
                 "nbpra_slotrequest", draft.Id, draft.Id.ToString("N") + ":submitted");
         }
 
@@ -797,7 +820,7 @@ namespace Nbpra.Plugins
             return message;
         }
 
-        private void RequestSignatories(Guid id)
+        private void RequestSignatories(Guid id, string payload)
         {
             var sub = LoadSubmission(id);
             RequireOwner(sub);
@@ -811,9 +834,20 @@ namespace Nbpra.Plugins
             var open = sections.Where(s => Opt(s, "nbpra_status") != C.SectionStatus.Approved).ToList();
             if (open.Count > 0) throw Invalid(open.Count + " section(s) are not yet approved: " + string.Join(", ", open.Take(4).Select(s => s.GetAttributeValue<string>("nbpra_name"))) + (open.Count > 4 ? "…" : "") + ".");
 
+            // The business owner names the five signatories here, once the checklist work is done.
+            if (!string.IsNullOrWhiteSpace(payload))
+            {
+                var named = Parse<SignatoriesIn>(payload).Signatories ?? new List<string>();
+                if (named.Count(x => Guid.TryParse(x, out _)) < 5) throw Invalid("Name all five signatories before sending the package.");
+                var ids = named.Take(5).Select(x => Guid.Parse(x)).ToList();
+                if (ids.Distinct().Count() < 5 && !AdminDecision.Flag(svc, "nbpra_AllowDuplicateSignatories")) throw Invalid("The five signatories must be five different people.");
+                var active = Rows("systemuser", new ColumnSet("isdisabled"), ("isdisabled", false)).Select(u => u.Id).ToList();
+                if (ids.Any(x => !active.Contains(x))) throw Invalid("One of the signatories is not an active user.");
+                SetSeats(id, named.Take(5).ToList());
+            }
             var seats = Rows("nbpra_signatory", new ColumnSet("nbpra_person", "nbpra_slotnumber"), ("nbpra_submission", id), ("nbpra_iscurrent", true))
                 .Where(s => s.GetAttributeValue<EntityReference>("nbpra_person") != null).OrderBy(s => s.GetAttributeValue<int?>("nbpra_slotnumber")).ToList();
-            if (seats.Count != 5) throw Invalid("Five signatories must be assigned before requesting approval.");
+            if (seats.Count != 5) throw Invalid("Name all five signatories before sending the package.");
             if (seats.Select(s => s.GetAttributeValue<EntityReference>("nbpra_person").Id).Distinct().Count() < 5 && !AdminDecision.Flag(svc, "nbpra_AllowDuplicateSignatories"))
                 throw Invalid("The five signatories must be five different people.");
 

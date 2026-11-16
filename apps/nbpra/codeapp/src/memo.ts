@@ -66,10 +66,12 @@ export async function buildMemo(source: DataSource, user: UserContext, submissio
       layout: "lightHorizontalLines",
     },
     { text: `Five signatories: ${detail.signatoriesApproved} of 5 approved`, style: "h3" },
-    {
-      table: { headerRows: 1, widths: [50, "*", 120], body: [[th("Seat"), th("Signatory"), th("Decision")], ...detail.signatories.map((p) => [String(p.slot), p.name, p.state])] },
-      layout: "lightHorizontalLines",
-    },
+    detail.signatories.length
+      ? {
+          table: { headerRows: 1, widths: [50, "*", 120], body: [[th("Seat"), th("Signatory"), th("Decision")], ...detail.signatories.map((p) => [String(p.slot), p.name, p.state])] },
+          layout: "lightHorizontalLines",
+        }
+      : { text: "Not yet named. The business owner names the five signatories once every checklist section is approved.", style: "muted" },
 
     { text: "Checklist responses", style: "h2", pageBreak: "before" },
     ...sections.flatMap((s) =>
