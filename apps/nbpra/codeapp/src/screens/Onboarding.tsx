@@ -34,7 +34,7 @@ export function Onboarding({ source, user, id, pickedSlot }: { source: DataSourc
     setDirty(true);
   };
 
-  const meeting = meetings.find((m) => m.slotId === intake.slotId);
+  const meeting = intake.slotId ? meetings.find((m) => m.slotId === intake.slotId) : undefined;
 
   async function save(): Promise<string | undefined> {
     const r = await source.saveOnboarding(sid, intake!);
@@ -70,7 +70,7 @@ export function Onboarding({ source, user, id, pickedSlot }: { source: DataSourc
   return (
     <>
       <PageHead eyebrow="New submission" title="Initial onboarding" />
-      <p className="lead">Save a draft at any point. When you submit, the request goes to the NBPRA administrator; the full checklist opens once they approve it. You name the five signatories at the end, after every checklist section is approved.</p>
+      <p className="lead">Save a draft at any point. When you submit, the request goes to the NBPRA administrator; the full checklist opens once they approve it. You choose the other five signatories later, as each area finishes its work.</p>
       {intake.copiedFrom && (
         <div className="notice info">
           Started from <span className="mono">{intake.copiedFrom}</span>. Its checklist answers will be waiting as drafts once this request is approved. Choose a meeting here; the meeting place, signatories, files and approvals are never copied.

@@ -224,7 +224,7 @@ namespace Nbpra.Plugins
         private string Context()
         {
             var u = svc.Retrieve("systemuser", actor, new ColumnSet("fullname"));
-            return "{\"userId\":\"" + actor + "\",\"fullName\":\"" + Js(u.GetAttributeValue<string>("fullname")) + "\",\"email\":\"" + Js(ActorEmail()) + "\",\"isAdmin\":" + (AdminDecision.IsAdmin(svc, actor) ? "true" : "false") + "}";
+            return "{\"directoryId\":\"" + Js(DirectoryId(actor)) + "\",\"userId\":\"" + actor + "\",\"fullName\":\"" + Js(u.GetAttributeValue<string>("fullname")) + "\",\"email\":\"" + Js(ActorEmail()) + "\",\"isAdmin\":" + (AdminDecision.IsAdmin(svc, actor) ? "true" : "false") + "}";
         }
 
         private Guid SaveOnboarding(string target, string payload)
@@ -306,10 +306,23 @@ namespace Nbpra.Plugins
         private const int Seats = 6;
 
         private string ActorEmail() => (svc.Retrieve("systemuser", actor, new ColumnSet("internalemailaddress")).GetAttributeValue<string>("internalemailaddress") ?? string.Empty).Trim();
+        private string DirectoryId(Guid userId) => svc.Retrieve("systemuser", userId, new ColumnSet("azureactivedirectoryobjectid")).GetAttributeValue<Guid?>("azureactivedirectoryobjectid")?.ToString() ?? string.Empty;
+
+        /// <summary>
+        /// Whether a signatory seat names this app user. The directory id is checked as well as
+        /// the email, because a user's address in Dataverse can differ from their mailbox.
+        /// </summary>
+        private bool IsPerson(Guid userId, string email, string directoryId)
+        {
+            var mine = DirectoryId(userId);
+            if (mine.Length > 0 && string.Equals(mine, (directoryId ?? string.Empty).Trim(), StringComparison.OrdinalIgnoreCase)) return true;
+            return SameEmail(svc.Retrieve("systemuser", userId, new ColumnSet("internalemailaddress")).GetAttributeValue<string>("internalemailaddress"), email);
+        }
+
         private static bool SameEmail(string a, string b) => a != null && b != null && string.Equals(a.Trim(), b.Trim(), StringComparison.OrdinalIgnoreCase);
 
         private List<Entity> CurrentSeats(Guid submissionId) =>
-            Rows("nbpra_signatory", new ColumnSet("nbpra_slotnumber", "nbpra_displayname", "nbpra_email", "nbpra_role", "nbpra_status", "nbpra_assignmentversion"), ("nbpra_submission", submissionId), ("nbpra_iscurrent", true));
+            Rows("nbpra_signatory", new ColumnSet("nbpra_slotnumber", "nbpra_displayname", "nbpra_email", "nbpra_directoryid", "nbpra_role", "nbpra_status", "nbpra_assignmentversion"), ("nbpra_submission", submissionId), ("nbpra_iscurrent", true));
 
         /// <summary>
         /// Names the person in one signatory seat. Changing a person who has already been
@@ -324,8 +337,7 @@ namespace Nbpra.Plugins
             if (seats.Any(x => (x.GetAttributeValue<int?>("nbpra_slotnumber") ?? 0) != n && SameEmail(x.GetAttributeValue<string>("nbpra_email"), email)) && !AdminDecision.Flag(svc, "nbpra_AllowDuplicateSignatories"))
                 throw Invalid(name + " is already a signatory on this submission. The six signatories must be six different people.");
             var owner = svc.Retrieve("nbpra_submission", submissionId, new ColumnSet("nbpra_businessowner")).GetAttributeValue<EntityReference>("nbpra_businessowner");
-            if (owner != null && !AdminDecision.AllowSelfApproval(svc)
-                && SameEmail(svc.Retrieve("systemuser", owner.Id, new ColumnSet("internalemailaddress")).GetAttributeValue<string>("internalemailaddress"), email))
+            if (owner != null && !AdminDecision.AllowSelfApproval(svc) && IsPerson(owner.Id, email, p.DirectoryId))
                 throw Invalid("The business owner cannot be a signatory on their own submission.");
 
             var seat = seats.FirstOrDefault(x => (x.GetAttributeValue<int?>("nbpra_slotnumber") ?? 0) == n);
@@ -655,8 +667,7 @@ namespace Nbpra.Plugins
         {
             var sub = LoadSubmission(submissionId);
             if (sub.GetAttributeValue<EntityReference>("nbpra_businessowner")?.Id == actor || AdminDecision.IsAdmin(svc, actor)) return;
-            var mine = ActorEmail();
-            if (mine.Length > 0 && CurrentSeats(submissionId).Any(x => SameEmail(x.GetAttributeValue<string>("nbpra_email"), mine))) return;
+            if (CurrentSeats(submissionId).Any(x => IsPerson(actor, x.GetAttributeValue<string>("nbpra_email"), x.GetAttributeValue<string>("nbpra_directoryid")))) return;
             foreach (var team in Rows("nbpra_approvalrequest", new ColumnSet("nbpra_reviewteam"), ("nbpra_submission", submissionId)).Select(r => r.GetAttributeValue<EntityReference>("nbpra_reviewteam")).Where(t => t != null).Select(t => t.Id).Distinct())
                 if (InTeam(team)) return;
             throw Denied("You do not have access to this submission's files.");
@@ -900,7 +911,7 @@ namespace Nbpra.Plugins
             Entity seat;
             try
             {
-                seat = svc.Retrieve("nbpra_signatory", seatId, new ColumnSet("nbpra_submission", "nbpra_slotnumber", "nbpra_displayname", "nbpra_email", "nbpra_role", "nbpra_status", "nbpra_iscurrent"));
+                seat = svc.Retrieve("nbpra_signatory", seatId, new ColumnSet("nbpra_submission", "nbpra_slotnumber", "nbpra_displayname", "nbpra_email", "nbpra_directoryid", "nbpra_role", "nbpra_status", "nbpra_iscurrent"));
             }
             catch (Exception)
             {
@@ -971,7 +982,7 @@ namespace Nbpra.Plugins
                 channel = C.Channel.Flow;
                 by = string.Empty;
             }
-            else if (SameEmail(ActorEmail(), email))
+            else if (IsPerson(actor, email, seat.GetAttributeValue<string>("nbpra_directoryid")))
             {
                 channel = C.Channel.App;
                 by = string.Empty;

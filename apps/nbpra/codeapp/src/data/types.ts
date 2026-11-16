@@ -147,6 +147,8 @@ export interface UserContext {
   userId: string;
   fullName: string;
   email: string;
+  /** Directory object id; empty when the user has none. */
+  directoryId: string;
   isAdmin: boolean;
 }
 

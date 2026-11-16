@@ -88,7 +88,7 @@ export function SignatoryPanel({ source, submissionId, signatories, canEdit, can
               <div>
                 <div className="sig-role">{label}</div>
                 {s.name ? <div className="person-name">{s.name}</div> : <div className="muted">Not chosen yet</div>}
-                {s.name && <div className="muted person-mail">{s.email}</div>}
+                {s.name && s.email !== s.name && <div className="muted person-mail">{s.email}</div>}
               </div>
               {s.name && <DecisionPill state={s.state} />}
             </div>

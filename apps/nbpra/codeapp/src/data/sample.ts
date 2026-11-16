@@ -276,7 +276,7 @@ const NOT_IN_SAMPLE = { ok: false as const, error: "Not available with sample da
 
 export const sampleSource: DataSource = {
   async context() {
-    return { userId: "", fullName: "Kate (sample administrator)", email: "", isAdmin: true };
+    return { userId: "", fullName: "Kate (sample administrator)", email: "", directoryId: "", isAdmin: true };
   },
   async listMeetings() {
     return [];

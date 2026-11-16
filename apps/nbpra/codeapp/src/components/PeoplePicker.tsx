@@ -36,7 +36,7 @@ export function PeoplePicker({ source, value, onChange, placeholder }: { source:
       <div className="person-chip">
         <div>
           <div className="person-name">{value.name}</div>
-          <div className="muted person-mail">{[value.email, value.jobTitle].filter(Boolean).join(" · ")}</div>
+          <div className="muted person-mail">{[value.email !== value.name && value.email, value.jobTitle].filter(Boolean).join(" · ")}</div>
         </div>
         <button type="button" className="link-button" onClick={() => onChange(null)}>
           Change

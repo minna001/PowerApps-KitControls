@@ -462,9 +462,11 @@ export function createLiveSource(t: Transport): DataSource {
     },
 
     async listSignatoryTasks(): Promise<SignatoryTask[]> {
-      const { email } = await context();
-      if (!email) return [];
-      const mine = await t.query("nbpra_signatories", { select: SEAT_SELECT, filter: `nbpra_iscurrent eq true and nbpra_status eq ${BASE + 1} and nbpra_email eq '${email.replace(/'/g, "''")}'` });
+      // Matched on directory id as well as email: a user's address in Dataverse can differ from their mailbox.
+      const { email, directoryId } = await context();
+      const me = [email && `nbpra_email eq '${email.replace(/'/g, "''")}'`, directoryId && `nbpra_directoryid eq '${directoryId}'`].filter(Boolean);
+      if (!me.length) return [];
+      const mine = await t.query("nbpra_signatories", { select: SEAT_SELECT, filter: `nbpra_iscurrent eq true and nbpra_status eq ${BASE + 1} and (${me.join(" or ")})` });
       if (!mine.length) return [];
       const subById = byId(await t.query("nbpra_submissions", { select: ["nbpra_submissionid", "nbpra_reference", "nbpra_name"] }), "nbpra_submissionid");
       return mine
