@@ -361,14 +361,12 @@ namespace Nbpra.Plugins
 
             var slot = svc.Retrieve("nbpra_slot", slotRef.Id, new ColumnSet("nbpra_status", "nbpra_meeting", "nbpra_capacity", "nbpra_activeallocationcount"));
             if (Opt(slot, "nbpra_status") != C.SlotStatus.Open) throw Invalid("That meeting can no longer be requested. Choose another.");
-            // A meeting takes a fixed number of submissions. Requests awaiting a decision hold a
-            // place as well as confirmed ones, so the number left only ever goes down as people apply.
-            // Touching the row first makes two people applying for the last place go one at a time.
-            var lockRow = new Entity("nbpra_slot", slotRef.Id);
-            lockRow["nbpra_activeallocationcount"] = slot.GetAttributeValue<int?>("nbpra_activeallocationcount") ?? 0;
-            svc.Update(lockRow);
-            var held = Rows("nbpra_slotrequest", new ColumnSet("nbpra_status", "nbpra_allocationactive", "nbpra_requestedslot", "nbpra_assignedslot"), ("nbpra_requestedslot", slotRef.Id))
-                .Count(r => Opt(r, "nbpra_status") == C.SlotRequestStatus.Pending || (Opt(r, "nbpra_status") == C.SlotRequestStatus.Approved && r.GetAttributeValue<bool?>("nbpra_allocationactive") == true));
+            // A meeting takes a fixed number of submissions. A place is taken only when the
+            // administrator approves a request; requests still awaiting a decision do not hold one,
+            // so approval is where a full meeting is finally enforced. A meeting that is already
+            // full cannot be requested at all.
+            var held = Rows("nbpra_slotrequest", new ColumnSet("nbpra_status", "nbpra_allocationactive"), ("nbpra_assignedslot", slotRef.Id))
+                .Count(r => Opt(r, "nbpra_status") == C.SlotRequestStatus.Approved && r.GetAttributeValue<bool?>("nbpra_allocationactive") == true);
             if (held >= (slot.GetAttributeValue<int?>("nbpra_capacity") ?? 1)) throw Invalid("That meeting is full. Choose another meeting.");
             var meetingRef = slot.GetAttributeValue<EntityReference>("nbpra_meeting");
             if (meetingRef != null)

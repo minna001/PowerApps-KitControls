@@ -154,7 +154,7 @@ export interface MeetingInfo {
   /** The record a request for a place at this meeting points at. */
   slotId: string;
   capacity: number;
-  /** Places held: confirmed submissions plus requests still awaiting a decision. */
+  /** Places taken: submissions the administrator has confirmed. Requests awaiting a decision do not count. */
   taken: number;
   remaining: number;
   requestable: boolean;

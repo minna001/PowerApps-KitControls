@@ -26,7 +26,7 @@ export function Calendar({ source, forSubmission }: { source: DataSource; forSub
     <>
       <PageHead eyebrow="Committee" title="Committee calendar" />
       <p className="lead">
-        Each meeting takes a limited number of submissions. Request a place to start your onboarding; the NBPRA administrator confirms it when they approve the request, and tells you when to join. Times are shown in {zone}.
+        Each meeting takes a limited number of submissions. Request a place to start your onboarding. A place is only taken once the NBPRA administrator approves the request, so a request does not guarantee one; they also tell you when to join. Times are shown in {zone}.
       </p>
       {meetings === undefined ? (
         <p className="muted">Loading…</p>

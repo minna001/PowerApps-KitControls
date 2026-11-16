@@ -284,14 +284,12 @@ export function createLiveSource(t: Transport): DataSource {
         t.query("nbpra_meetings", { select: ["nbpra_meetingid", "nbpra_name", "nbpra_startat", "nbpra_endat", "nbpra_status", "nbpra_requestopenat", "nbpra_requestcloseat", "nbpra_updatenote", "_nbpra_committee_value"], orderBy: ["nbpra_startat asc"] }),
         t.query("nbpra_slots", { select: ["nbpra_slotid", "nbpra_capacity", "nbpra_status", "_nbpra_meeting_value"], orderBy: ["nbpra_startat asc"] }),
         t.query("nbpra_committees", { select: ["nbpra_committeeid", "nbpra_name"] }),
-        t.query("nbpra_slotrequests", { select: ["nbpra_status", "nbpra_allocationactive", "_nbpra_requestedslot_value"] }),
+        t.query("nbpra_slotrequests", { select: ["nbpra_status", "nbpra_allocationactive", "_nbpra_assignedslot_value"] }),
       ]);
       const committeeById = byId(committees, "nbpra_committeeid");
-      // A place is held by a request awaiting a decision or by a confirmed one.
-      const PENDING_REQUEST = BASE + 1;
+      // A place is taken once the administrator approves a request, not when it is submitted.
       const APPROVED_REQUEST = BASE + 2;
-      const heldOn = (slotId: string) =>
-        requests.filter((r) => r._nbpra_requestedslot_value === slotId && (Number(r.nbpra_status) === PENDING_REQUEST || (Number(r.nbpra_status) === APPROVED_REQUEST && r.nbpra_allocationactive === true))).length;
+      const heldOn = (slotId: string) => requests.filter((r) => r._nbpra_assignedslot_value === slotId && Number(r.nbpra_status) === APPROVED_REQUEST && r.nbpra_allocationactive === true).length;
       const now = Date.now();
       return meetings
         .filter((m) => Date.parse(m.nbpra_startat) > now)
