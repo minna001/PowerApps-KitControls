@@ -161,11 +161,7 @@ export function Portfolio({ source, user, mode }: { source: DataSource; user: Us
                     </td>
                     <td className="nowrap">
                       {formatDate(s.meetingDate)}
-                      {s.slot && (
-                        <div className="row-sub">
-                          {s.slot} · {s.slotConfirmed ? "confirmed" : "requested"}
-                        </div>
-                      )}
+                      {s.meetingDate && <div className="row-sub">place {s.slotConfirmed ? "confirmed" : "requested"}</div>}
                     </td>
                     <td className="num">{s.ageDays}d</td>
                   </tr>

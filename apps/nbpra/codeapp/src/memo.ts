@@ -26,7 +26,7 @@ export async function buildMemo(source: DataSource, user: UserContext, submissio
   ]);
   const isFinal = FINAL.includes(detail.status);
   const generated = new Date().toISOString();
-  const slot = detail.meetingDate ? `${detail.meetingDate}${detail.slot ? `, ${detail.slot}` : ""} (${detail.slotConfirmed ? "confirmed" : "requested"})` : "None";
+  const slot = detail.meetingDate ? `${detail.meetingDate} (place ${detail.slotConfirmed ? "confirmed" : "requested"})` : "None";
 
   const th = (t: string) => ({ text: t, style: "th" });
   const facts: [string, string][] = [
@@ -36,7 +36,7 @@ export async function buildMemo(source: DataSource, user: UserContext, submissio
     ["Sponsor", detail.sponsor || "Not given"],
     ["Business area", detail.businessArea || "Not given"],
     ["Classification", intake.proposalType || "Not given"],
-    ["Committee slot", slot],
+    ["Committee meeting", slot],
     ["Started from", intake.copiedFrom ?? "New submission"],
   ];
   const files = sections.flatMap((s) => (s?.questions ?? []).filter((q) => q.file).map((q) => ({ section: s!.title, q })));

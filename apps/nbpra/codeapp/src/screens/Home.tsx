@@ -61,9 +61,9 @@ export function Home({ source, user }: { source: DataSource; user: UserContext }
       ) : mine.length === 0 ? (
         <div className="empty-card">
           <p>You have no submissions yet.</p>
-          <p className="muted">Pick a committee slot from the calendar, then fill in the onboarding details. The checklist opens once the NBPRA administrator approves the request; you name the five signatories at the end.</p>
+          <p className="muted">Request a place at a committee meeting from the calendar, then fill in the onboarding details. The checklist opens once the NBPRA administrator approves the request; you name the five signatories at the end.</p>
           <a className="btn primary" href="#/calendar">
-            Find a committee slot
+            Find a committee meeting
           </a>
         </div>
       ) : (
@@ -95,7 +95,7 @@ export function Home({ source, user }: { source: DataSource; user: UserContext }
                   </td>
                   <td className="nowrap">
                     {formatDate(s.meetingDate)}
-                    {s.slot && <div className="row-sub">{s.slot} · {s.slotConfirmed ? "confirmed" : "requested"}</div>}
+                    {s.meetingDate && <div className="row-sub">place {s.slotConfirmed ? "confirmed" : "requested"}</div>}
                   </td>
                 </tr>
               ))}

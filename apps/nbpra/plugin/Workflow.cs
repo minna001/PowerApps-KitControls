@@ -33,6 +33,7 @@ namespace Nbpra.Plugins
     ///   saveExport          TargetId = submission; Payload = {"fileName","base64","exportType"} -> Data: export id
     ///   downloadExport      TargetId = export package -> Data: {"fileName","contentType","base64"}
     ///   copySubmission      TargetId = earlier submission -> Data: new submission id
+    ///   postNote            TargetId = submission; Comment = the administrator's update for the submitter
     ///
     /// Runs in the operation's transaction as SYSTEM, recording the human actor.
     /// Checks come before writes; a refused request writes nothing.
@@ -125,6 +126,7 @@ namespace Nbpra.Plugins
                     case "downloadEvidence": data = DownloadFile("nbpra_evidence", Id(target)); break;
                     case "saveExport": data = SaveExport(Id(target), payload).ToString(); message = "Memo saved to the submission's export history."; break;
                     case "downloadExport": data = DownloadFile("nbpra_exportpackage", Id(target)); break;
+                    case "postNote": PostNote(Id(target), comment); message = "Update posted to the submission."; break;
                     case "copySubmission": data = CopySubmission(Id(target)).ToString(); message = "New draft created from the earlier submission."; break;
                     default: throw Invalid("Unknown operation.");
                 }
@@ -357,8 +359,17 @@ namespace Nbpra.Plugins
 
             if (missing.Count > 0) throw Invalid("Complete these before submitting: " + string.Join(", ", missing) + ".");
 
-            var slot = svc.Retrieve("nbpra_slot", slotRef.Id, new ColumnSet("nbpra_status", "nbpra_meeting"));
-            if (Opt(slot, "nbpra_status") != C.SlotStatus.Open) throw Invalid("That slot can no longer be requested. Choose another.");
+            var slot = svc.Retrieve("nbpra_slot", slotRef.Id, new ColumnSet("nbpra_status", "nbpra_meeting", "nbpra_capacity", "nbpra_activeallocationcount"));
+            if (Opt(slot, "nbpra_status") != C.SlotStatus.Open) throw Invalid("That meeting can no longer be requested. Choose another.");
+            // A meeting takes a fixed number of submissions. Requests awaiting a decision hold a
+            // place as well as confirmed ones, so the number left only ever goes down as people apply.
+            // Touching the row first makes two people applying for the last place go one at a time.
+            var lockRow = new Entity("nbpra_slot", slotRef.Id);
+            lockRow["nbpra_activeallocationcount"] = slot.GetAttributeValue<int?>("nbpra_activeallocationcount") ?? 0;
+            svc.Update(lockRow);
+            var held = Rows("nbpra_slotrequest", new ColumnSet("nbpra_status", "nbpra_allocationactive", "nbpra_requestedslot", "nbpra_assignedslot"), ("nbpra_requestedslot", slotRef.Id))
+                .Count(r => Opt(r, "nbpra_status") == C.SlotRequestStatus.Pending || (Opt(r, "nbpra_status") == C.SlotRequestStatus.Approved && r.GetAttributeValue<bool?>("nbpra_allocationactive") == true));
+            if (held >= (slot.GetAttributeValue<int?>("nbpra_capacity") ?? 1)) throw Invalid("That meeting is full. Choose another meeting.");
             var meetingRef = slot.GetAttributeValue<EntityReference>("nbpra_meeting");
             if (meetingRef != null)
             {
@@ -672,6 +683,22 @@ namespace Nbpra.Plugins
             Event(sub.ToEntityReference(), C.EventType.Export, "Committee memo generated (" + (type == C.ExportType.Draft ? "draft" : type == C.ExportType.Submitted ? "submitted package" : "committee-authorized") + ")", null, null, null,
                 "Package rev " + (sub.GetAttributeValue<int?>("nbpra_packagerevision") ?? 0), "nbpra_exportpackage", id, id.ToString("N") + ":generated");
             return id;
+        }
+
+        private void PostNote(Guid submissionId, string text)
+        {
+            if (!AdminDecision.IsAdmin(svc, actor)) throw Denied("Only an NBPRA Administrator can post an update.");
+            if (text.Length == 0) throw Invalid("Write the update before posting it.");
+            if (text.Length > 4000) throw Invalid("Keep the update under 4,000 characters.");
+            var sub = LoadSubmission(submissionId);
+            Touch(submissionId, null, e =>
+            {
+                e["nbpra_adminnote"] = text;
+                e["nbpra_adminnoteat"] = now;
+                e["nbpra_adminnoteby"] = actorRef;
+            });
+            // The box shows the latest update; every update stays in the timeline.
+            Event(sub.ToEntityReference(), C.EventType.Notification, "Administrator posted an update", null, null, text, null, "nbpra_submission", submissionId, submissionId.ToString("N") + ":note:" + now.Ticks);
         }
 
         private Guid CopySubmission(Guid sourceId)

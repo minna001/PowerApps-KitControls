@@ -8,7 +8,7 @@ const AREAS = ["Commercial Banking", "Global Markets", "Payments", "Retail Banki
 const TYPES = ["New business", "New product", "Product extension", "Material change"];
 const BLANK: Intake = { title: "", businessArea: "", proposalType: "", summary: "", scope: "", sponsorId: "", slotId: "", signatories: ["", "", "", "", ""] };
 
-/** Initial onboarding: intake details and the requested slot. The five signatories are named later, once the checklist is approved. */
+/** Initial onboarding: intake details and the requested meeting. The five signatories are named later, once the checklist is approved. */
 export function Onboarding({ source, user, id, pickedSlot }: { source: DataSource; user: UserContext; id?: string; pickedSlot?: string }) {
   const [intake, setIntake] = useState<Intake>();
   const [people, setPeople] = useState<Person[]>([]);
@@ -35,7 +35,7 @@ export function Onboarding({ source, user, id, pickedSlot }: { source: DataSourc
     setDirty(true);
   };
 
-  const slot = meetings.flatMap((m) => m.slots.map((s) => ({ ...s, meeting: m }))).find((s) => s.id === intake.slotId);
+  const meeting = meetings.find((m) => m.slotId === intake.slotId);
 
   async function save(): Promise<string | undefined> {
     const r = await source.saveOnboarding(sid, intake!);
@@ -74,30 +74,34 @@ export function Onboarding({ source, user, id, pickedSlot }: { source: DataSourc
       <p className="lead">Save a draft at any point. When you submit, the request goes to the NBPRA administrator; the full checklist opens once they approve it. You name the five signatories at the end, after every checklist section is approved.</p>
       {intake.copiedFrom && (
         <div className="notice info">
-          Started from <span className="mono">{intake.copiedFrom}</span>. Its checklist answers will be waiting as drafts once this request is approved. Choose a slot here; the slot, signatories, files and approvals are never copied.
+          Started from <span className="mono">{intake.copiedFrom}</span>. Its checklist answers will be waiting as drafts once this request is approved. Choose a meeting here; the meeting place, signatories, files and approvals are never copied.
         </div>
       )}
       <Notice result={result} />
 
       <div className="form-grid">
         <section className="panel">
-          <div className="panel-head">Requested committee slot</div>
+          <div className="panel-head">Requested committee meeting</div>
           <div className="panel-body">
-            {slot ? (
+            {meeting ? (
               <>
-                <div className="next-title">{formatDateTime(slot.meeting.startAt).replace(/,? \d\d:\d\d$/, "")}</div>
+                <div className="next-title">{formatDateTime(meeting.startAt)}</div>
                 <div>
-                  {formatTime(slot.startAt)}–{formatTime(slot.endAt)} ({zone}) · {slot.meeting.committee}
+                  {meeting.committee} · until {formatTime(meeting.endAt)} ({zone})
                 </div>
-                <div className="muted mono">{slot.reference}</div>
-                {!slot.requestable && <div className="blocked">This slot can no longer be requested. Choose another.</div>}
+                <div className="muted">
+                  {meeting.remaining} of {meeting.capacity} places left. The administrator confirms your place and tells you when to join.
+                </div>
+                {!meeting.requestable && <div className="blocked">This meeting can no longer be requested ({(meeting.closedReason ?? "closed").toLowerCase()}). Choose another.</div>}
               </>
+            ) : intake.slotId ? (
+              <div className="muted">A place is requested at a meeting that is no longer listed.</div>
             ) : (
-              <div className="muted">No slot chosen yet.</div>
+              <div className="muted">No meeting chosen yet.</div>
             )}
             <p>
               <a className="link plain" href={sid ? `#/calendar?for=${sid}` : "#/calendar"}>
-                {slot ? "Choose a different slot" : "Choose a slot from the calendar"}
+                {meeting ? "Choose a different meeting" : "Choose a meeting from the calendar"}
               </a>
               {dirty ? <span className="muted"> — save your draft first, or unsaved changes are lost</span> : null}
             </p>

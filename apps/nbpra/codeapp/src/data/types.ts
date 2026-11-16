@@ -65,6 +65,10 @@ export interface Signatory {
 
 export interface SubmissionDetail extends Submission {
   ownerId: string;
+  /** Latest update the administrator posted for this submission, such as when to join. */
+  adminNote?: AdminNote;
+  /** Update on the meeting itself, shown to everyone with a place at it. */
+  meetingNote?: string;
   sections: SectionSummary[];
   signatories: Signatory[];
   blockers: string[];
@@ -138,18 +142,7 @@ export interface Person {
   name: string;
 }
 
-export interface SlotInfo {
-  id: string;
-  reference: string;
-  startAt: string;
-  endAt: string;
-  capacity: number;
-  allocated: number;
-  /** Open slots in an open meeting inside its request window, with capacity left. */
-  requestable: boolean;
-  status: string;
-}
-
+/** A committee meeting takes a fixed number of submissions; there are no individual time slots. */
 export interface MeetingInfo {
   id: string;
   name: string;
@@ -158,7 +151,23 @@ export interface MeetingInfo {
   endAt: string;
   status: string;
   requestCloseAt?: string;
-  slots: SlotInfo[];
+  /** The record a request for a place at this meeting points at. */
+  slotId: string;
+  capacity: number;
+  /** Places held: confirmed submissions plus requests still awaiting a decision. */
+  taken: number;
+  remaining: number;
+  requestable: boolean;
+  /** Why it cannot be requested, when it cannot. */
+  closedReason?: string;
+  /** The administrator's update for everyone attending. */
+  note?: string;
+}
+
+export interface AdminNote {
+  text: string;
+  at: string;
+  by: string;
 }
 
 export interface Intake {

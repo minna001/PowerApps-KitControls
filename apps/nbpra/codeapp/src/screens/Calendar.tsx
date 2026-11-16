@@ -4,7 +4,15 @@ import type { MeetingInfo } from "../data/types";
 import { Pill } from "../components/bits";
 import { PageHead, formatDateTime, formatTime, zone } from "../components/ui";
 
-/** Slot finder. Choosing a slot starts a new onboarding request, or returns to the one being edited. */
+/** How full a meeting is, as the pill beside it. */
+export function capacityPill(m: MeetingInfo): { tone: "good" | "warn" | "neutral" | "bad"; label: string } {
+  if (m.status === "Canceled") return { tone: "bad", label: "Canceled" };
+  if (!m.requestable) return { tone: "neutral", label: m.remaining === 0 && m.status === "Open" ? "Closed · full" : `Closed${m.closedReason && m.closedReason !== "Full" ? ` · ${m.closedReason.toLowerCase()}` : ""}` };
+  if (m.remaining <= 2) return { tone: "warn", label: "Low capacity" };
+  return { tone: "good", label: "Places available" };
+}
+
+/** Meeting finder. Requesting a place starts a new onboarding request, or returns to the one being edited. */
 export function Calendar({ source, forSubmission }: { source: DataSource; forSubmission?: string }) {
   const [meetings, setMeetings] = useState<MeetingInfo[]>();
 
@@ -16,9 +24,9 @@ export function Calendar({ source, forSubmission }: { source: DataSource; forSub
 
   return (
     <>
-      <PageHead eyebrow="Committee" title="Calendar and slots" />
+      <PageHead eyebrow="Committee" title="Committee calendar" />
       <p className="lead">
-        Choose an open slot to request it. A request is not a booking: the NBPRA administrator confirms the slot when they approve your onboarding. Times are shown in {zone}.
+        Each meeting takes a limited number of submissions. Request a place to start your onboarding; the NBPRA administrator confirms it when they approve the request, and tells you when to join. Times are shown in {zone}.
       </p>
       {meetings === undefined ? (
         <p className="muted">Loading…</p>
@@ -27,42 +35,43 @@ export function Calendar({ source, forSubmission }: { source: DataSource; forSub
           <p>No upcoming committee meetings are scheduled.</p>
         </div>
       ) : (
-        meetings.map((m) => {
-          const free = m.slots.filter((s) => s.requestable).length;
-          return (
-            <section key={m.id} className="meeting">
-              <div className="meeting-head">
-                <div>
-                  <h2 className="section-title">{formatDateTime(m.startAt)}</h2>
-                  <div className="muted">
-                    {m.committee} · {m.name}
-                    {m.requestCloseAt ? ` · requests close ${formatDateTime(m.requestCloseAt)}` : ""}
+        <div className="meetings">
+          {meetings.map((m) => {
+            const pill = capacityPill(m);
+            return (
+              <section key={m.id} className={"meeting" + (m.requestable ? "" : " shut")}>
+                <div className="meeting-head">
+                  <div>
+                    <h2 className="section-title">{formatDateTime(m.startAt)}</h2>
+                    <div className="muted">
+                      {m.committee} · until {formatTime(m.endAt)}
+                      {m.requestCloseAt && m.requestable ? ` · requests close ${formatDateTime(m.requestCloseAt)}` : ""}
+                    </div>
                   </div>
+                  <Pill tone={pill.tone}>{pill.label}</Pill>
                 </div>
-                <Pill tone={m.status === "Open" && free > 0 ? "good" : m.status === "Canceled" ? "bad" : "neutral"}>{m.status === "Open" ? `${free} of ${m.slots.length} slots open` : m.status}</Pill>
-              </div>
-              <div className="slots">
-                {m.slots.map((s) =>
-                  s.requestable ? (
-                    <a key={s.id} className="slot open" href={target(s.id)} aria-label={`Request slot ${formatTime(s.startAt)} to ${formatTime(s.endAt)}`}>
-                      <span className="slot-time">
-                        {formatTime(s.startAt)}–{formatTime(s.endAt)}
-                      </span>
-                      <span className="slot-state">Request</span>
+                <div className="places" role="img" aria-label={`${m.remaining} of ${m.capacity} places left`}>
+                  {Array.from({ length: m.capacity }, (_, i) => (
+                    <span key={i} className={"place" + (i < m.taken ? " taken" : "")} />
+                  ))}
+                </div>
+                <div className="meeting-foot">
+                  <div>
+                    <span className="places-num">{m.remaining}</span> of {m.capacity} places left
+                  </div>
+                  {m.requestable ? (
+                    <a className="btn primary" href={target(m.slotId)}>
+                      Request a place
                     </a>
                   ) : (
-                    <span key={s.id} className="slot taken">
-                      <span className="slot-time">
-                        {formatTime(s.startAt)}–{formatTime(s.endAt)}
-                      </span>
-                      <span className="slot-state">{s.status !== "Open" ? s.status : s.allocated >= s.capacity ? "Taken" : "Closed"}</span>
-                    </span>
-                  ),
-                )}
-              </div>
-            </section>
-          );
-        })
+                    <span className="muted">{m.closedReason ?? "Closed"}</span>
+                  )}
+                </div>
+                {m.note && <div className="notice info meeting-note">{m.note}</div>}
+              </section>
+            );
+          })}
+        </div>
       )}
     </>
   );

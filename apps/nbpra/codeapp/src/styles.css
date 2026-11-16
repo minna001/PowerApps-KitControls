@@ -230,3 +230,23 @@ a.nav-item:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px;
 .file-q { display: grid; gap: 8px; border: 1px dashed var(--line); background: var(--card); padding: 10px 12px; }
 .file-q input[type="file"] { font: inherit; max-width: 100%; }
 .memo-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 6px; font-size: 13px; }
+
+/* Meeting capacity and updates */
+.meetings { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+.meetings .meeting { margin-bottom: 0; display: flex; flex-direction: column; gap: 12px; }
+.meetings .meeting-head { margin-bottom: 0; }
+.meeting.shut { background: #f1eee6; }
+.places { display: flex; gap: 6px; }
+.place { flex: 1; max-width: 46px; height: 10px; border: 1px solid var(--teal); background: #dcebe9; }
+.place.taken { background: #cfcdc2; border-color: #b9b6a9; }
+.meeting-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: auto; }
+.meeting-foot .btn.primary { margin-top: 0; }
+.places-num { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.meeting-note { margin: 0; }
+.updates { border-color: var(--gold); }
+.updates .panel-head { background: #f7efd9; }
+.update + .update, .update-post { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
+.update-text { white-space: pre-wrap; }
+.update-meta { font-size: 12.5px; margin-top: 4px; }
+.update-post { display: grid; gap: 8px; justify-items: start; }
+.update-post .fui-Field { width: 100%; }

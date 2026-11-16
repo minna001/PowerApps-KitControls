@@ -12,9 +12,9 @@ const WORDS = [
   "revision", "boolean", "currency", "answered", "original", "uploaded", "external", "occurred", "category", "provider", "assigned", "location", "manifest",
   "replaced", "timezone", "filename", "sponsor", "summary", "desired", "current", "package", "default", "meeting", "request", "version", "display", "section",
   "content", "routing", "purpose", "outcome", "comment", "decided", "channel", "subject", "related", "trigger", "address", "attempt", "timing", "status",
-  "review", "policy", "offset", "answer", "locked", "person", "option", "upload", "closed", "actor", "action", "record", "export", "source", "reason", "copied",
+  "review", "update", "policy", "offset", "answer", "locked", "person", "option", "upload", "closed", "actor", "action", "record", "export", "source", "reason", "copied",
   "active", "intake", "number", "block", "count", "start", "close", "order", "label", "value", "route", "state", "multi", "codes", "bytes", "error", "event",
-  "owner", "scope", "final", "admin", "title", "type", "slot", "area", "last", "from", "code", "team", "open", "rule", "help", "text", "days", "date", "file",
+  "owner", "scope", "note", "final", "admin", "title", "type", "slot", "area", "last", "from", "code", "team", "open", "rule", "help", "text", "days", "date", "file",
   "size", "user", "kind", "body", "read", "name", "def", "due", "end", "key", "old", "new", "id", "is", "at", "by",
 ].sort((a, b) => b.length - a.length);
 

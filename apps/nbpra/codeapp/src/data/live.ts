@@ -56,7 +56,6 @@ function choice(row: Row | undefined, field: string, labels: string[]): string {
 }
 const byId = (rows: Row[], key: string) => new Map(rows.map((r) => [r[key] as string, r]));
 const anyOf = (field: string, ids: string[]) => ids.map((id) => `${field} eq ${id}`).join(" or ");
-const time = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 
 function result<T>(r: OperationReply, data: (d: string) => T): OpResult<T> {
   return r.Outcome === "accepted" ? { ok: true, message: r.Message, data: data(r.Data ?? "") } : { ok: false, error: r.Message || "The request was not accepted." };
@@ -75,14 +74,14 @@ export function createLiveSource(t: Transport): DataSource {
     const [users, slots, meetings, requests] = await Promise.all([
       t.query("systemusers", { select: ["systemuserid", "fullname"] }),
       t.query("nbpra_slots", { select: ["nbpra_slotid", "nbpra_startat", "_nbpra_meeting_value"] }),
-      t.query("nbpra_meetings", { select: ["nbpra_meetingid", "nbpra_status"] }),
+      t.query("nbpra_meetings", { select: ["nbpra_meetingid", "nbpra_status", "nbpra_updatenote"] }),
       t.query("nbpra_slotrequests", { select: ["nbpra_slotrequestid", "_nbpra_requestedslot_value"] }),
     ]);
     return { users: byId(users, "systemuserid"), slots: byId(slots, "nbpra_slotid"), meetings: byId(meetings, "nbpra_meetingid"), requests: byId(requests, "nbpra_slotrequestid") };
   }
   type Ref = Awaited<ReturnType<typeof reference>>;
 
-  const SUB_SELECT = ["nbpra_submissionid", "nbpra_reference", "nbpra_name", "nbpra_businessarea", "nbpra_status", "createdon", "nbpra_packagerevision", "_nbpra_businessowner_value", "_nbpra_sponsor_value", "_nbpra_assignedslot_value", "_nbpra_currentslotrequest_value"];
+  const SUB_SELECT = ["nbpra_submissionid", "nbpra_reference", "nbpra_name", "nbpra_businessarea", "nbpra_status", "createdon", "nbpra_packagerevision", "nbpra_adminnote", "nbpra_adminnoteat", "_nbpra_adminnoteby_value", "_nbpra_businessowner_value", "_nbpra_sponsor_value", "_nbpra_assignedslot_value", "_nbpra_currentslotrequest_value"];
   const SECTION_SELECT = ["nbpra_sectioninstanceid", "_nbpra_submission_value", "_nbpra_sectiondef_value", "_nbpra_currentrevision_value", "nbpra_status", "nbpra_name", "nbpra_isapplicable"];
 
   /** Signatory approvals recorded on each submission's open signatory request. */
@@ -129,7 +128,7 @@ export function createLiveSource(t: Transport): DataSource {
       nextActor,
       blocker,
       meetingDate: canceled ? undefined : start?.slice(0, 10),
-      slot: canceled || !start ? undefined : time(start),
+      slot: undefined, // meetings have places, not timed slots; the administrator says when to join
       slotConfirmed: !!assigned && !canceled,
       ageDays: r.createdon ? Math.max(0, Math.floor((Date.now() - Date.parse(r.createdon)) / 86400000)) : 0,
     };
@@ -235,7 +234,16 @@ export function createLiveSource(t: Transport): DataSource {
             });
           return { id: s.nbpra_sectioninstanceid, code: defById.get(s._nbpra_sectiondef_value)?.nbpra_code ?? s.nbpra_name, title: s.nbpra_name, status, revision: 0, answered: 0, required: 0, groups };
         });
-      const detail: SubmissionDetail = { ...sub, ownerId: row._nbpra_businessowner_value ?? "", sections: sectionRows, signatories, blockers: sub.blocker ? [sub.blocker] : [] };
+      const heldSlot = ref.slots.get(row._nbpra_assignedslot_value) ?? ref.slots.get(ref.requests.get(row._nbpra_currentslotrequest_value)?._nbpra_requestedslot_value);
+      const detail: SubmissionDetail = {
+        ...sub,
+        ownerId: row._nbpra_businessowner_value ?? "",
+        adminNote: row.nbpra_adminnote ? { text: row.nbpra_adminnote, at: row.nbpra_adminnoteat, by: ref.users.get(row._nbpra_adminnoteby_value)?.fullname ?? "Administrator" } : undefined,
+        meetingNote: (heldSlot && ref.meetings.get(heldSlot._nbpra_meeting_value)?.nbpra_updatenote) || undefined,
+        sections: sectionRows,
+        signatories,
+        blockers: sub.blocker ? [sub.blocker] : [],
+      };
       return detail;
     },
 
@@ -272,18 +280,31 @@ export function createLiveSource(t: Transport): DataSource {
     // ---- calendar and onboarding ----
 
     async listMeetings() {
-      const [meetings, slots, committees] = await Promise.all([
-        t.query("nbpra_meetings", { select: ["nbpra_meetingid", "nbpra_name", "nbpra_startat", "nbpra_endat", "nbpra_status", "nbpra_requestopenat", "nbpra_requestcloseat", "_nbpra_committee_value"], orderBy: ["nbpra_startat asc"] }),
-        t.query("nbpra_slots", { select: ["nbpra_slotid", "nbpra_slotreference", "nbpra_startat", "nbpra_endat", "nbpra_capacity", "nbpra_activeallocationcount", "nbpra_status", "_nbpra_meeting_value"], orderBy: ["nbpra_startat asc"] }),
+      const [meetings, slots, committees, requests] = await Promise.all([
+        t.query("nbpra_meetings", { select: ["nbpra_meetingid", "nbpra_name", "nbpra_startat", "nbpra_endat", "nbpra_status", "nbpra_requestopenat", "nbpra_requestcloseat", "nbpra_updatenote", "_nbpra_committee_value"], orderBy: ["nbpra_startat asc"] }),
+        t.query("nbpra_slots", { select: ["nbpra_slotid", "nbpra_capacity", "nbpra_status", "_nbpra_meeting_value"], orderBy: ["nbpra_startat asc"] }),
         t.query("nbpra_committees", { select: ["nbpra_committeeid", "nbpra_name"] }),
+        t.query("nbpra_slotrequests", { select: ["nbpra_status", "nbpra_allocationactive", "_nbpra_requestedslot_value"] }),
       ]);
       const committeeById = byId(committees, "nbpra_committeeid");
+      // A place is held by a request awaiting a decision or by a confirmed one.
+      const PENDING_REQUEST = BASE + 1;
+      const APPROVED_REQUEST = BASE + 2;
+      const heldOn = (slotId: string) =>
+        requests.filter((r) => r._nbpra_requestedslot_value === slotId && (Number(r.nbpra_status) === PENDING_REQUEST || (Number(r.nbpra_status) === APPROVED_REQUEST && r.nbpra_allocationactive === true))).length;
       const now = Date.now();
       return meetings
         .filter((m) => Date.parse(m.nbpra_startat) > now)
         .map((m): MeetingInfo => {
           const status = choice(m, "nbpra_status", L.meeting);
-          const inWindow = (!m.nbpra_requestopenat || Date.parse(m.nbpra_requestopenat) <= now) && (!m.nbpra_requestcloseat || Date.parse(m.nbpra_requestcloseat) >= now);
+          const mine = slots.filter((s) => s._nbpra_meeting_value === m.nbpra_meetingid && choice(s, "nbpra_status", L.slot) === "Open");
+          const capacity = mine.reduce((n, s) => n + (s.nbpra_capacity ?? 1), 0);
+          const taken = mine.reduce((n, s) => n + heldOn(s.nbpra_slotid), 0);
+          const withRoom = mine.find((s) => heldOn(s.nbpra_slotid) < (s.nbpra_capacity ?? 1));
+          const remaining = Math.max(0, capacity - taken);
+          const notYet = !!m.nbpra_requestopenat && Date.parse(m.nbpra_requestopenat) > now;
+          const tooLate = !!m.nbpra_requestcloseat && Date.parse(m.nbpra_requestcloseat) < now;
+          const closedReason = status !== "Open" ? status : capacity === 0 ? "Not open for requests" : remaining === 0 ? "Full" : notYet ? "Requests not open yet" : tooLate ? "Requests have closed" : undefined;
           return {
             id: m.nbpra_meetingid,
             name: m.nbpra_name,
@@ -292,14 +313,13 @@ export function createLiveSource(t: Transport): DataSource {
             endAt: m.nbpra_endat,
             status,
             requestCloseAt: m.nbpra_requestcloseat ?? undefined,
-            slots: slots
-              .filter((s) => s._nbpra_meeting_value === m.nbpra_meetingid)
-              .map((s) => {
-                const slotStatus = choice(s, "nbpra_status", L.slot);
-                const capacity = s.nbpra_capacity ?? 1;
-                const allocated = s.nbpra_activeallocationcount ?? 0;
-                return { id: s.nbpra_slotid, reference: s.nbpra_slotreference, startAt: s.nbpra_startat, endAt: s.nbpra_endat, capacity, allocated, status: slotStatus, requestable: status === "Open" && inWindow && slotStatus === "Open" && allocated < capacity };
-              }),
+            slotId: (withRoom ?? mine[0])?.nbpra_slotid ?? "",
+            capacity,
+            taken,
+            remaining,
+            requestable: !closedReason && !!withRoom,
+            closedReason,
+            note: m.nbpra_updatenote || undefined,
           };
         });
     },
@@ -464,6 +484,10 @@ export function createLiveSource(t: Transport): DataSource {
     },
     async finalSubmit(submissionId) {
       return plain(await t.workflow("finalSubmit", submissionId));
+    },
+
+    async postNote(submissionId, text) {
+      return plain(await t.workflow("postNote", submissionId, undefined, text));
     },
 
     async decide(submissionId, action, comment): Promise<ActionResult> {

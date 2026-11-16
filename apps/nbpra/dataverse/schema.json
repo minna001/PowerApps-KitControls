@@ -47,7 +47,8 @@
       ["requestcloseat", "datetime", false, ""],
       ["location", "text:500", false, "Restricted: meeting link or room"],
       ["status", "choice:meetingstatus", true, ""],
-      ["cancellationreason", "memo", false, "Required on cancel with affected records"]
+      ["cancellationreason", "memo", false, "Required on cancel with affected records"],
+      ["updatenote", "memo", false, "Update shown to everyone with a place at this meeting"]
     ] },
 
     { "name": "slot", "display": "Calendar Slot", "ownership": "organization", "columns": [
@@ -82,7 +83,10 @@
       ["lastbusinessactivityat", "datetime", false, ""],
       ["withdrawnat", "datetime", false, ""],
       ["withdrawnreason", "memo", false, ""],
-      ["copiedfrom", "lookup:submission", false, "Earlier submission this one was started from; content only, never approvals"]
+      ["copiedfrom", "lookup:submission", false, "Earlier submission this one was started from; content only, never approvals"],
+      ["adminnote", "memo", false, "Latest update from the administrator to the submitter, such as when to join the meeting"],
+      ["adminnoteat", "datetime", false, ""],
+      ["adminnoteby", "lookup:systemuser", false, ""]
     ], "keys": [["reference"]] },
 
     { "name": "slotrequest", "display": "Slot Request", "ownership": "user", "columns": [

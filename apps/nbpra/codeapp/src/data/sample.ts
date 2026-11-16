@@ -314,6 +314,9 @@ export const sampleSource: DataSource = {
   async copySubmission() {
     return NOT_IN_SAMPLE;
   },
+  async postNote() {
+    return NOT_IN_SAMPLE;
+  },
   async listReviewTasks() {
     return [];
   },

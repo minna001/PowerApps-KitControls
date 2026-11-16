@@ -8,6 +8,7 @@ import { saveToDisk } from "../files";
 import { formatDateTime } from "../components/ui";
 import { Checklist } from "../components/Checklist";
 import { SignatoryPicker } from "../components/SignatoryPicker";
+import { MeetingUpdates } from "../components/MeetingUpdates";
 import { Notice } from "../components/ui";
 import { Button } from "@fluentui/react-components";
 import { AdminDecision } from "../components/AdminDecision";
@@ -105,7 +106,6 @@ export function Workspace({ source, user, id, initialTab }: { source: DataSource
           <h1 className="page-title">{s.title}</h1>
           <div className="ws-meta">
             {[s.businessArea, `Owner ${s.owner}`, s.sponsor ? `Sponsor ${s.sponsor}` : "", `Committee ${formatDate(s.meetingDate)}`].filter(Boolean).join(" · ")}
-            {s.slot ? `, ${s.slot}` : ""}
           </div>
         </div>
         <div className="ws-badges">
@@ -240,6 +240,16 @@ export function Workspace({ source, user, id, initialTab }: { source: DataSource
               }}
             />
           )}
+          <MeetingUpdates
+            source={source}
+            submission={s}
+            canPost={user.isAdmin && !source.isSample}
+            onPosted={(r) => {
+              setResult(r);
+              if (r.ok) load();
+            }}
+          />
+
           <div className="panel">
             <div className="panel-head">Next action</div>
             <div className="panel-body">
@@ -307,8 +317,8 @@ export function Workspace({ source, user, id, initialTab }: { source: DataSource
               <dd>{s.status}</dd>
               <dt>Committee date</dt>
               <dd>{formatDate(s.meetingDate)}</dd>
-              <dt>Slot</dt>
-              <dd>{s.slot ? `${s.slot} (${s.slotConfirmed ? "confirmed" : "requested"})` : "None"}</dd>
+              <dt>Place</dt>
+              <dd>{s.meetingDate ? (s.slotConfirmed ? "Confirmed" : "Requested") : "None"}</dd>
               <dt>Owner</dt>
               <dd>{s.owner}</dd>
             </dl>

@@ -53,6 +53,6 @@ namespace Nbpra.Plugins
         internal static class DecisionOutcome { public const int Approve = B + 0, ChangesRequested = B + 1, Deny = B + 2, Reject = B + 3; }
         internal static class Channel { public const int App = B + 0, Teams = B + 1, Email = B + 2, Flow = B + 3, System = B + 4; }
         internal static class ActorKind { public const int Human = B + 0, System = B + 1; }
-        internal static class EventType { public const int Submission = B + 0, Slot = B + 1, Checklist = B + 2, Section = B + 3, ReviewRequest = B + 5, Signatory = B + 6, Invalidation = B + 7, FinalSubmission = B + 8, Admission = B + 9, Evidence = B + 4, Export = B + 12; }
+        internal static class EventType { public const int Submission = B + 0, Slot = B + 1, Checklist = B + 2, Section = B + 3, ReviewRequest = B + 5, Signatory = B + 6, Invalidation = B + 7, FinalSubmission = B + 8, Admission = B + 9, Evidence = B + 4, Notification = B + 11, Export = B + 12; }
     }
 }

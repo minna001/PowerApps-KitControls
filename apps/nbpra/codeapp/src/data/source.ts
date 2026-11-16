@@ -60,6 +60,9 @@ export interface DataSource {
   decideSignatory(assignmentId: string, outcome: "approve" | "return", comment: string): Promise<OpResult>;
   finalSubmit(submissionId: string): Promise<OpResult>;
 
+  /** Administrator's update for the submitter. Replaces the one shown; all are kept in the timeline. */
+  postNote(submissionId: string, text: string): Promise<OpResult>;
+
   /** Kate's onboarding and final-admission decisions. */
   decide(submissionId: string, action: AdminAction, comment: string): Promise<ActionResult>;
 }
